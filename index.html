@@ -180,6 +180,9 @@
     .khoa-quan-tri { text-align: center; padding: 30px 10px; }
     .khoa-quan-tri .icon { font-size: 2rem; margin-bottom: 8px; }
 
+    .diem-kem { color: #d32f2f; font-weight: bold; } /* Điểm < 3.5 */
+    .diem-yeu { color: #f57c00; font-weight: bold; } /* Điểm >= 3.5 và < 5.0 */
+
     .an { display: none !important; }
 
     /* DASHBOARD CSS */
@@ -426,11 +429,26 @@
     document.getElementById('ket-qua-ca-nhan').innerHTML = html;
   }
 
+  function formatDiem(val) {
+    if (val === '' || val === null || val === undefined) return '';
+    // Kiểm tra xem nó có phải số không (để tránh định dạng cột chữ)
+    if (!isNaN(val) && val.toString().trim() !== '') {
+       const diem = parseFloat(val);
+       if (diem < 3.5) return `<span class="diem-kem">${val}</span>`;
+       if (diem >= 3.5 && diem < 5.0) return `<span class="diem-yeu">${val}</span>`;
+    }
+    return val;
+  }
+
   function monHocRows(diem) {
-    const boQua = ['STT', 'Họ và tên'];
+    const boQua = ['STT', 'Lớp', 'Họ', 'Tên'];
     return Object.keys(diem)
       .filter(k => !boQua.includes(k) && diem[k] !== '')
-      .map(k => `<tr><td style="font-weight: 500">${k}</td><td>${diem[k]}</td></tr>`)
+      .map(k => {
+         const val = diem[k];
+         const valFmt = ['Nhận xét', 'Ghi chú'].includes(k) ? val : formatDiem(val);
+         return `<tr><td style="font-weight: 500">${k}</td><td>${valFmt}</td></tr>`;
+      })
       .join('');
   }
 
@@ -468,7 +486,12 @@
     const cot = Object.keys(ds[0]);
     let html = `<div class="cuon-bang"><table class="bang-diem"><tr>${cot.map(c => `<th>${c}</th>`).join('')}</tr>`;
     ds.forEach(hs => {
-      html += `<tr>${cot.map(c => `<td>${hs[c] || ''}</td>`).join('')}</tr>`;
+      html += `<tr>${cot.map(c => {
+         const val = hs[c] || '';
+         const boQuaToMau = ['STT', 'Lớp', 'Họ', 'Tên', 'Nhận xét', 'Ghi chú'];
+         const valFmt = boQuaToMau.includes(c) ? val : formatDiem(val);
+         return `<td>${valFmt}</td>`;
+      }).join('')}</tr>`;
     });
     html += '</table></div>';
     document.getElementById('ket-qua-lop').innerHTML = html;
