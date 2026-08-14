@@ -496,11 +496,22 @@
              let matchHo = searchSpace.find(s => s.n.startsWith('họ'));
              let matchTen = searchSpace.find(s => s.n === 'tên');
 
-             if (matchFull) {
-                colMapping['Họ và tên'] = matchFull.c;
-             } else if (matchHo && matchTen) {
+             if (matchHo && matchTen) {
                 colMapping['Họ'] = matchHo.c;
                 colMapping['Tên'] = matchTen.c;
+             } else if (matchFull) {
+                // Kiểm tra xem cột ngay bên phải có trống tiêu đề không (tức là ô gộp)
+                let rightCol = matchFull.c + 1;
+                let hasHeader = searchSpace.find(s => s.c === rightCol);
+                
+                if (!hasHeader) {
+                   // Ô gộp 2 cột
+                   colMapping['Họ'] = matchFull.c;
+                   colMapping['Tên'] = rightCol;
+                } else {
+                   // Cột đơn bình thường
+                   colMapping['Họ và tên'] = matchFull.c;
+                }
              }
              return;
           }
