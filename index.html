@@ -602,6 +602,51 @@
     HK1: 'Học kỳ 1', HK2: 'Học kỳ 2', CaNam: 'Cả năm'
   };
 
+  function autoCalculateTT22(hs, ky) {
+      if (ky === 'HK1' || ky === 'HK2') {
+          let sumTX = 0;
+          let countTX = 0;
+          ['TX1', 'TX2', 'TX3', 'TX4'].forEach(tx => {
+             const vStr = hs[tx];
+             if (vStr !== undefined && vStr !== null && vStr.toString().trim() !== '') {
+                 let valStr = vStr.toString().trim();
+                 let v;
+                 // Tương thích ngược với lỗi % cũ
+                 if (valStr.endsWith('%')) {
+                     v = parseFloat(valStr) / 100;
+                     hs[tx] = v.toString().replace('.', ','); // Fix luôn hiển thị ở frontend
+                 } else {
+                     v = parseFloat(valStr.replace(',', '.'));
+                 }
+                 if (!isNaN(v)) { sumTX += v; countTX++; }
+             }
+          });
+          
+          let vGk = NaN;
+          let vCk = NaN;
+          if (hs['ĐĐGgk'] !== undefined && hs['ĐĐGgk'] !== null) vGk = parseFloat(hs['ĐĐGgk'].toString().trim().replace(',', '.'));
+          if (hs['ĐĐGck'] !== undefined && hs['ĐĐGck'] !== null) vCk = parseFloat(hs['ĐĐGck'].toString().trim().replace(',', '.'));
+          
+          let totalScore = sumTX;
+          let totalWeight = countTX;
+          
+          if (!isNaN(vGk)) { totalScore += vGk * 2; totalWeight += 2; }
+          if (!isNaN(vCk)) { totalScore += vCk * 3; totalWeight += 3; }
+          
+          if (totalWeight > 0) {
+             hs['ĐTB mhk'] = (Math.round((totalScore / totalWeight) * 10) / 10).toFixed(1).replace('.', ',');
+          }
+      } else if (ky === 'CaNam') {
+          let hk1 = NaN, hk2 = NaN;
+          if (hs['TBHK 1'] !== undefined && hs['TBHK 1'] !== null) hk1 = parseFloat(hs['TBHK 1'].toString().trim().replace(',', '.'));
+          if (hs['TBHK 2'] !== undefined && hs['TBHK 2'] !== null) hk2 = parseFloat(hs['TBHK 2'].toString().trim().replace(',', '.'));
+          
+          if (!isNaN(hk1) && !isNaN(hk2)) {
+              hs['TB Cả năm'] = (Math.round((hk1 + 2 * hk2) / 3 * 10) / 10).toFixed(1).replace('.', ',');
+          }
+      }
+  }
+
   function xepLoaiDiem(diemStr) {
     if (diemStr === undefined || diemStr === '') return '';
     const d = parseFloat(diemStr.toString().replace(',', '.'));
@@ -625,6 +670,7 @@
         const diem = ketQua.diem[ky];
         if (!diem) return;
         
+        autoCalculateTT22(diem, ky); // Tự động tính toán lại
         const cotDiem = (ky === 'CaNam') ? 'TB Cả năm' : 'ĐTB mhk';
         const xl = xepLoaiDiem(diem[cotDiem]);
 
@@ -694,6 +740,10 @@
       document.getElementById('ket-qua-lop').innerHTML = '<p class="ghi-chu">Chưa có dữ liệu cho kỳ này.</p>';
       return;
     }
+    
+    // Tự động tính toán điểm trung bình động
+    ds.forEach(hs => autoCalculateTT22(hs, ky));
+
     const cotDiem = (ky === 'CaNam') ? 'TB Cả năm' : 'ĐTB mhk';
     const cot = Object.keys(ds[0]);
     
@@ -791,6 +841,14 @@
     goiAPI('getDanhSachLop', { ky, lop })
       .then(ds => {
         document.getElementById('nut-xem-thong-ke').disabled = false;
+        
+        // Cập nhật ĐTB động trước khi phân tích
+        if (lop === 'ALL') {
+             ds.forEach(lopData => lopData.data.forEach(hs => autoCalculateTT22(hs, ky)));
+        } else {
+             ds.forEach(hs => autoCalculateTT22(hs, ky));
+        }
+        
         renderThongKe(ds, ky, lop);
       })
       .catch(loi => {
