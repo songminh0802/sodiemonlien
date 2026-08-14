@@ -1022,15 +1022,44 @@
           });
         }
 
-        // Tìm cột STT để làm mốc (có thể là A hoặc C tùy file xuất ra, nhưng không lấy cột B)
+        // Tìm cột STT để làm mốc
         let sttMatch = searchSpace.find(s => s.n === 'stt');
         colMapping['STT'] = sttMatch ? sttMatch.c : 2; // Mặc định C (index 2)
         
-        // --- ÉP CỨNG VỊ TRÍ CỘT HỌ VÀ TÊN ---
-        // Bỏ qua cột B (Mã HS) và Bỏ luôn cột E theo yêu cầu.
-        // Chỉ lấy duy nhất cột D (index 3) chứa toàn bộ Họ và Tên, sau đó hệ thống tự tách.
-        colMapping['Họ'] = 3;
-        colMapping['Tên'] = null; // Cờ đánh dấu: Bắt buộc tự tách Tên từ cột Họ (cột D)
+        // --- NHẬN DIỆN CỘT HỌ VÀ TÊN THÔNG MINH ---
+        // Tìm cột có chữ "Họ và tên" hoặc "Họ"
+        let hoMatch = searchSpace.find(s => s.n.includes('họvàtên') || s.n === 'họ' || s.n === 'họđệm');
+        let hoCol = hoMatch ? hoMatch.c : (colMapping['STT'] + 1);
+
+        // Cột Tên thường nằm ngay bên phải cột Họ
+        let tenCol = hoCol + 1; 
+        let tenMatch = searchSpace.find(s => s.n === 'tên');
+        if (tenMatch) tenCol = tenMatch.c;
+
+        // Kiểm tra xem cột bên phải có thực sự là cột Tên không
+        let rightHeader = searchSpace.find(s => s.c === tenCol);
+        let hasDataInTenCol = false;
+        
+        // Nếu cột bên phải có tiêu đề rác (ví dụ "Ngày sinh", "Mã HS") thì đó KHÔNG phải cột Tên
+        if (rightHeader && !rightHeader.n.includes('tên') && !rightHeader.n.includes('họ')) {
+             hasDataInTenCol = false; 
+        } else {
+             // Kiểm tra thử 10 dòng dữ liệu đầu tiên xem cột Tên có dữ liệu thật không
+             let testStartIdx = headerRowIdx + 1;
+             for (let r = testStartIdx; r < Math.min(testStartIdx + 10, rawData.length); r++) {
+                 if (rawData[r] && rawData[r][tenCol] !== undefined && rawData[r][tenCol].toString().trim() !== '') {
+                     hasDataInTenCol = true;
+                     break;
+                 }
+             }
+        }
+
+        colMapping['Họ'] = hoCol;
+        if (hasDataInTenCol) {
+           colMapping['Tên'] = tenCol;
+        } else {
+           colMapping['Tên'] = null; // Cờ đánh dấu: Bắt buộc tự tách Tên từ cột Họ
+        }
 
         targetCols.forEach(tc => {
           if (tc === 'Họ' || tc === 'Tên' || tc === 'STT') return; // Đã xử lý ở trên
@@ -1064,6 +1093,12 @@
         for (let i = dataStartIdx; i < rawData.length; i++) {
           const row = rawData[i];
           
+          // LỌC DỮ LIỆU RÁC: Chỉ lấy những dòng có STT là một con số hợp lệ
+          let sttVal = colMapping['STT'] !== undefined ? row[colMapping['STT']] : '';
+          if (sttVal === undefined || sttVal === null || sttVal.toString().trim() === '' || isNaN(parseInt(sttVal))) {
+              continue; // Bỏ qua các dòng rác ở cuối file (Chữ ký, Tổng kết, v.v...)
+          }
+
           let ho = '';
           let ten = '';
 
@@ -1083,8 +1118,7 @@
              }
           }
 
-          // Bỏ qua dòng rác/trống
-          if (!ho && !ten) continue;
+          // Không cần check !ho && !ten nữa vì đã block bằng STT ở trên
           
           const obj = {};
           targetCols.forEach(tc => {
