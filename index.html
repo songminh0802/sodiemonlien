@@ -717,7 +717,59 @@
       }).join('')}</tr>`;
     });
     html += '</table></div>';
-    document.getElementById('ket-qua-lop').innerHTML = html;
+
+    // Tính toán bảng thống kê chi tiết cho từng cột điểm
+    const boQuaToMau = ['STT', 'Lớp', 'Họ', 'Tên', 'Nhận xét', 'Ghi chú'];
+    const scoreCols = cot.filter(c => !boQuaToMau.includes(c));
+    
+    let statsHtml = `<div class="thong-ke-chi-tiet" style="margin-bottom: 30px; margin-top: 10px;">
+      <h3 style="text-align: center; color: var(--primary); margin-bottom: 12px; font-size: 1.1rem; font-weight: 600; text-transform: uppercase;">Thống kê chi tiết các cột điểm</h3>
+      <div class="cuon-bang">
+        <table class="bang-diem" style="margin-bottom: 0;">
+          <tr>
+            <th>Cột điểm</th>
+            <th>SL nhập</th>
+            <th>🟢 Tốt (≥8.0)</th>
+            <th>🔵 Khá (6.5-7.9)</th>
+            <th>🟡 Đạt (5.0-6.4)</th>
+            <th>🔴 Chưa đạt (<5.0)</th>
+          </tr>`;
+    
+    scoreCols.forEach(sc => {
+       let total = 0;
+       let count = { T: 0, K: 0, D: 0, C: 0 };
+       ds.forEach(hs => {
+          const valStr = (hs[sc] || '').toString().trim();
+          if (!valStr) return;
+          const val = parseFloat(valStr.replace(',', '.'));
+          if (isNaN(val)) return;
+          
+          total++;
+          if (val >= 8.0) count.T++;
+          else if (val >= 6.5) count.K++;
+          else if (val >= 5.0) count.D++;
+          else count.C++;
+       });
+       
+       if (total > 0) {
+          const ptT = ((count.T / total) * 100).toFixed(1) + '%';
+          const ptK = ((count.K / total) * 100).toFixed(1) + '%';
+          const ptD = ((count.D / total) * 100).toFixed(1) + '%';
+          const ptC = ((count.C / total) * 100).toFixed(1) + '%';
+          
+          statsHtml += `<tr>
+            <td style="font-weight: bold; color: var(--primary);">${sc}</td>
+            <td style="font-weight: 600;">${total}</td>
+            <td>${count.T} <span style="font-size: 0.85em; color: #6b7280;">(${ptT})</span></td>
+            <td>${count.K} <span style="font-size: 0.85em; color: #6b7280;">(${ptK})</span></td>
+            <td>${count.D} <span style="font-size: 0.85em; color: #6b7280;">(${ptD})</span></td>
+            <td><span style="color: var(--danger); font-weight: bold;">${count.C}</span> <span style="font-size: 0.85em; color: #6b7280;">(${ptC})</span></td>
+          </tr>`;
+       }
+    });
+    statsHtml += `</table></div></div>`;
+
+    document.getElementById('ket-qua-lop').innerHTML = statsHtml + html;
   }
 
   // ====== TAB: THỐNG KÊ (DASHBOARD) ======
