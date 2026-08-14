@@ -216,6 +216,9 @@
             <option value="HK2">Học kỳ 2</option>
             <option value="CaNam">Cả năm</option>
           </select>
+          <select id="chon-lop-thong-ke">
+            <option value="">-- Chọn lớp --</option>
+          </select>
           <button class="nut" id="nut-xem-thong-ke">Xem thống kê</button>
         </div>
         <p class="ghi-chu">Hệ thống sẽ tự động tổng hợp Sĩ số, Điểm trung bình và tỷ lệ Xếp loại của lớp.</p>
@@ -266,6 +269,9 @@
             <option value="HK2">Học kỳ 2</option>
             <option value="CaNam">Cả năm</option>
           </select>
+          <select id="chon-lop-lop">
+            <option value="">-- Chọn lớp --</option>
+          </select>
           <button class="nut" id="nut-xem-lop">Xem danh sách</button>
         </div>
         <div id="thong-bao-lop"></div>
@@ -303,6 +309,7 @@
             <option value="HK2">Học kỳ 2</option>
             <option value="CaNam">Cả năm</option>
           </select>
+          <input type="text" id="o-lop-import" placeholder="Tên lớp (vd: 6A1)">
         </div>
         <div class="hang-nhap">
           <input type="file" id="o-file-excel" accept=".xlsx, .xls">
@@ -331,6 +338,24 @@
   }
 
   let matKhauPhien = null; // giữ mật khẩu trong bộ nhớ tạm của phiên làm việc, không lưu lại
+
+  // ====== LẤY DANH SÁCH LỚP ======
+  function loadDanhSachLop() {
+    goiAPI('getDanhSachLopHoc')
+      .then(lops => {
+         let html = '<option value="">-- Chọn lớp --</option>';
+         lops.forEach(l => html += `<option value="${l}">${l}</option>`);
+         
+         const chonLopTk = document.getElementById('chon-lop-thong-ke');
+         if(chonLopTk) chonLopTk.innerHTML = html;
+         
+         const chonLopLop = document.getElementById('chon-lop-lop');
+         if(chonLopLop) chonLopLop.innerHTML = html;
+      })
+      .catch(e => console.error('Lỗi tải danh sách lớp:', e));
+  }
+  
+  window.addEventListener('DOMContentLoaded', loadDanhSachLop);
 
   // ====== CHUYỂN TAB ======
   document.querySelectorAll('.tab-nut').forEach(nut => {
@@ -412,11 +437,18 @@
   // ====== TAB 2: XEM THEO LỚP / KỲ ======
   document.getElementById('nut-xem-lop').addEventListener('click', () => {
     const ky = document.getElementById('chon-ky-lop').value;
+    const lop = document.getElementById('chon-lop-lop').value;
+    
+    if (!lop) {
+       hienThongBao('thong-bao-lop', 'Vui lòng chọn lớp để xem.', 'loi');
+       return;
+    }
+
     hienThongBao('thong-bao-lop', '', '');
     document.getElementById('ket-qua-lop').innerHTML = 'Đang tải...';
     document.getElementById('nut-xem-lop').disabled = true;
 
-    goiAPI('getDanhSachLop', { ky })
+    goiAPI('getDanhSachLop', { ky, lop })
       .then(ds => {
         document.getElementById('nut-xem-lop').disabled = false;
         renderDanhSachLop(ds);
@@ -447,11 +479,18 @@
 
   document.getElementById('nut-xem-thong-ke').addEventListener('click', () => {
     const ky = document.getElementById('chon-ky-thong-ke').value;
+    const lop = document.getElementById('chon-lop-thong-ke').value;
+
+    if (!lop) {
+       hienThongBao('thong-bao-thong-ke', 'Vui lòng chọn lớp để thống kê.', 'loi');
+       return;
+    }
+
     hienThongBao('thong-bao-thong-ke', '', '');
     document.getElementById('ket-qua-thong-ke').classList.add('an');
     document.getElementById('nut-xem-thong-ke').disabled = true;
 
-    goiAPI('getDanhSachLop', { ky })
+    goiAPI('getDanhSachLop', { ky, lop })
       .then(ds => {
         document.getElementById('nut-xem-thong-ke').disabled = false;
         renderThongKe(ds, ky);
@@ -573,7 +612,13 @@
   // ====== NHẬP EXCEL ======
   document.getElementById('nut-nhap-excel').addEventListener('click', () => {
     const ky = document.getElementById('chon-ky-import').value;
+    const lop = document.getElementById('o-lop-import').value.trim();
     const file = document.getElementById('o-file-excel').files[0];
+    
+    if (!lop) {
+      hienThongBao('thong-bao-import', 'Vui lòng nhập tên lớp (vd: 6A1) trước khi nhập điểm.', 'loi');
+      return;
+    }
     if (!file) {
       hienThongBao('thong-bao-import', 'Chọn file Excel trước đã thầy ơi.', 'loi');
       return;
@@ -721,10 +766,12 @@
           return;
         }
 
-        goiAPI('importExcel', { ky, records, password: matKhauPhien })
-          .then(soLuong => {
+        goiAPI('importExcel', { ky, lop, records, password: matKhauPhien })
+          .then(res => {
             document.getElementById('nut-nhap-excel').disabled = false;
-            hienThongBao('thong-bao-import', `Đã nhập ${soLuong} dòng vào ${TEN_KY[ky]}.`, 'tot');
+            hienThongBao('thong-bao-import', `Đã nhập thành công ${res} dòng.`, 'tot');
+            document.getElementById('o-file-excel').value = '';
+            loadDanhSachLop();
           })
           .catch(loi => {
             document.getElementById('nut-nhap-excel').disabled = false;
