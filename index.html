@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <style>
+    :root {
+      --muc: #1c2b3a;
+      --muc-nhat: #33475c;
+      --giay: #f6f3ec;
+      --giay-toi: #ece7db;
+      --dong: #b8863b;
+      --do: #b3413e;
+      --xanh: #3a7d5c;
+      --vien: #dcd5c4;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--giay);
+      color: var(--muc);
+      font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    header.trang {
+      background: var(--muc);
+      color: var(--giay);
+      padding: 22px 20px 18px;
+      border-bottom: 3px double var(--dong);
+    }
+
+    header.trang h1 {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-weight: 600;
+      font-size: 1.5rem;
+      letter-spacing: 0.02em;
+    }
+
+    header.trang p {
+      margin: 4px 0 0;
+      font-size: 0.85rem;
+      opacity: 0.75;
+    }
+
+    nav.tab {
+      display: flex;
+      gap: 2px;
+      background: var(--giay-toi);
+      padding: 6px 6px 0;
+      overflow-x: auto;
+    }
+
+    nav.tab button {
+      flex: 1;
+      min-width: 120px;
+      border: none;
+      background: transparent;
+      color: var(--muc-nhat);
+      padding: 12px 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 8px 8px 0 0;
+      border-bottom: 3px solid transparent;
+    }
+
+    nav.tab button.dang-chon {
+      background: var(--giay);
+      color: var(--muc);
+      border-bottom: 3px solid var(--dong);
+    }
+
+    main {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 20px 16px 60px;
+    }
+
+    .khung {
+      display: none;
+    }
+
+    .khung.dang-chon {
+      display: block;
+    }
+
+    .the {
+      background: #fff;
+      border: 1px solid var(--vien);
+      border-radius: 10px;
+      padding: 18px;
+      margin-bottom: 16px;
+    }
+
+    .hang-nhap {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 6px;
+    }
+
+    input[type="text"], input[type="password"], select {
+      flex: 1;
+      min-width: 160px;
+      padding: 10px 12px;
+      border: 1px solid var(--vien);
+      border-radius: 6px;
+      font-size: 0.95rem;
+      background: var(--giay);
+      color: var(--muc);
+    }
+
+    button.nut {
+      background: var(--muc);
+      color: var(--giay);
+      border: none;
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+
+    button.nut:hover { background: var(--muc-nhat); }
+    button.nut:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    button.nut.vien {
+      background: transparent;
+      color: var(--muc);
+      border: 1px solid var(--muc);
+    }
+
+    .ghi-chu {
+      font-size: 0.8rem;
+      color: var(--muc-nhat);
+      opacity: 0.8;
+      margin: 4px 0 0;
+    }
+
+    .thong-bao {
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-size: 0.88rem;
+      margin-top: 10px;
+    }
+
+    .thong-bao.loi { background: #fbeaea; color: var(--do); border: 1px solid #e3b8b6; }
+    .thong-bao.tot { background: #e9f3ee; color: var(--xanh); border: 1px solid #bcdccb; }
+
+    table.bang-diem {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      margin-top: 10px;
+    }
+
+    table.bang-diem th, table.bang-diem td {
+      border-bottom: 1px solid var(--vien);
+      padding: 7px 8px;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    table.bang-diem th {
+      background: var(--giay-toi);
+      position: sticky;
+      top: 0;
+    }
+
+    .cuon-bang { overflow-x: auto; border: 1px solid var(--vien); border-radius: 8px; }
+
+    .the-ket-qua { border-left: 4px solid var(--dong); padding-left: 14px; margin-top: 10px; }
+    .the-ket-qua h3 { margin: 0 0 2px; font-family: Georgia, serif; }
+    .the-ket-qua .ma { color: var(--muc-nhat); font-size: 0.85rem; margin-bottom: 10px; }
+
+    .khoa-quan-tri { text-align: center; padding: 30px 10px; }
+    .khoa-quan-tri .icon { font-size: 2rem; margin-bottom: 8px; }
+
+    .an { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <header class="trang">
+    <h1>Sổ Điểm Điện Tử</h1>
+    <p>Tra cứu và quản lý điểm học sinh theo từng kỳ</p>
+  </header>
+
+  <nav class="tab">
+    <button class="tab-nut dang-chon" data-tab="ca-nhan">Tra cứu cá nhân</button>
+    <button class="tab-nut" data-tab="lop">Xem theo lớp</button>
+    <button class="tab-nut" data-tab="quan-tri">Quản trị</button>
+  </nav>
+
+  <main>
+
+    <!-- TAB 1: TRA CỨU CÁ NHÂN -->
+    <section id="khung-ca-nhan" class="khung dang-chon">
+      <div class="the">
+        <div class="hang-nhap">
+          <input type="text" id="o-ma-hs" placeholder="Nhập Mã học sinh...">
+          <button class="nut" id="nut-tra-cuu">Tra cứu</button>
+        </div>
+        <p class="ghi-chu">Kết quả hiển thị điểm của học sinh ở cả 5 kỳ (nếu có).</p>
+        <div id="thong-bao-ca-nhan"></div>
+        <div id="ket-qua-ca-nhan"></div>
+      </div>
+    </section>
+
+    <!-- TAB 2: XEM THEO LỚP / KỲ -->
+    <section id="khung-lop" class="khung">
+      <div class="the">
+        <div class="hang-nhap">
+          <select id="chon-ky-lop">
+            <option value="Diem_GK1">Giữa kỳ 1</option>
+            <option value="Diem_CK1">Cuối kỳ 1</option>
+            <option value="Diem_GK2">Giữa kỳ 2</option>
+            <option value="Diem_CK2">Cuối kỳ 2</option>
+            <option value="Diem_CaNam">Cả năm</option>
+          </select>
+          <button class="nut" id="nut-xem-lop">Xem danh sách</button>
+        </div>
+        <div id="thong-bao-lop"></div>
+        <div id="ket-qua-lop"></div>
+      </div>
+    </section>
+
+    <!-- TAB 3: QUẢN TRỊ -->
+    <section id="khung-quan-tri" class="khung">
+      <div class="the" id="khu-vuc-khoa">
+        <div class="khoa-quan-tri">
+          <div class="icon">🔒</div>
+          <p>Nhập mật khẩu quản trị để nhập điểm từ Excel hoặc khởi tạo lại cấu trúc dữ liệu.</p>
+          <div class="hang-nhap" style="justify-content:center">
+            <input type="password" id="o-mat-khau" placeholder="Mật khẩu quản trị" style="max-width:220px">
+            <button class="nut" id="nut-mo-khoa">Mở khóa</button>
+          </div>
+          <div id="thong-bao-khoa"></div>
+        </div>
+      </div>
+
+      <div class="the an" id="khu-vuc-admin">
+        <h3 style="margin-top:0">Khởi tạo / cập nhật cấu trúc dữ liệu</h3>
+        <p class="ghi-chu">Chỉ cần chạy khi thêm sheet mới hoặc đổi lại tên cột — không cần chạy khi nhập điểm bình thường.</p>
+        <button class="nut vien" id="nut-khoi-tao">Khởi tạo Database</button>
+        <div id="thong-bao-khoi-tao"></div>
+      </div>
+
+      <div class="the an" id="khu-vuc-import">
+        <h3 style="margin-top:0">Nhập điểm từ Excel</h3>
+        <p class="ghi-chu">Chọn kỳ, sau đó chọn file Excel (.xlsx) có dòng tiêu đề trùng tên cột trong Google Sheet. Dữ liệu cũ của kỳ này sẽ được thay thế hoàn toàn bằng file mới.</p>
+        <div class="hang-nhap">
+          <select id="chon-ky-import">
+            <option value="Diem_GK1">Giữa kỳ 1</option>
+            <option value="Diem_CK1">Cuối kỳ 1</option>
+            <option value="Diem_GK2">Giữa kỳ 2</option>
+            <option value="Diem_CK2">Cuối kỳ 2</option>
+            <option value="Diem_CaNam">Cả năm</option>
+          </select>
+        </div>
+        <div class="hang-nhap">
+          <input type="file" id="o-file-excel" accept=".xlsx">
+          <button class="nut" id="nut-nhap-excel">Nhập dữ liệu</button>
+        </div>
+        <div id="thong-bao-import"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script>
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbxXExy1la6O6ZcPYXbRyisijIM9yklie2cz-BKMLj_R9QGAe7UdAbRopLINOi2z4W7M/exec";
+
+  async function goiAPI(action, data = {}) {
+    const res = await fetch(GAS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action, data })
+    });
+    const result = await res.json();
+    if (!result.success) throw new Error(result.message);
+    return result.data;
+  }
+
+  let matKhauPhien = null; // giữ mật khẩu trong bộ nhớ tạm của phiên làm việc, không lưu lại
+
+  // ====== CHUYỂN TAB ======
+  document.querySelectorAll('.tab-nut').forEach(nut => {
+    nut.addEventListener('click', () => {
+      document.querySelectorAll('.tab-nut').forEach(n => n.classList.remove('dang-chon'));
+      document.querySelectorAll('.khung').forEach(k => k.classList.remove('dang-chon'));
+      nut.classList.add('dang-chon');
+      document.getElementById('khung-' + nut.dataset.tab).classList.add('dang-chon');
+    });
+  });
+
+  function hienThongBao(idKhung, noiDung, loai) {
+    const o = document.getElementById(idKhung);
+    o.innerHTML = noiDung ? `<div class="thong-bao ${loai}">${noiDung}</div>` : '';
+  }
+
+  // ====== TAB 1: TRA CỨU CÁ NHÂN ======
+  document.getElementById('nut-tra-cuu').addEventListener('click', traCuuCaNhan);
+  document.getElementById('o-ma-hs').addEventListener('keydown', e => {
+    if (e.key === 'Enter') traCuuCaNhan();
+  });
+
+  function traCuuCaNhan() {
+    const maHS = document.getElementById('o-ma-hs').value.trim();
+    if (!maHS) return;
+
+    hienThongBao('thong-bao-ca-nhan', '', '');
+    document.getElementById('ket-qua-ca-nhan').innerHTML = 'Đang tra cứu...';
+    document.getElementById('nut-tra-cuu').disabled = true;
+
+    goiAPI('getTraCuuCaNhan', { maHS })
+      .then(ketQua => {
+        document.getElementById('nut-tra-cuu').disabled = false;
+        renderTraCuu(ketQua);
+      })
+      .catch(loi => {
+        document.getElementById('nut-tra-cuu').disabled = false;
+        document.getElementById('ket-qua-ca-nhan').innerHTML = '';
+        hienThongBao('thong-bao-ca-nhan', loi.message, 'loi');
+      });
+  }
+
+  const TEN_KY = {
+    Diem_GK1: 'Giữa kỳ 1', Diem_CK1: 'Cuối kỳ 1',
+    Diem_GK2: 'Giữa kỳ 2', Diem_CK2: 'Cuối kỳ 2', Diem_CaNam: 'Cả năm'
+  };
+
+  function renderTraCuu(ketQua) {
+    const tt = ketQua.thongTin;
+    let html = `<div class="the-ket-qua">
+      <h3>${tt.hoTen}</h3>
+      <div class="ma">Mã học sinh: ${tt.maHS}${tt.ngaySinh ? ' • Ngày sinh: ' + tt.ngaySinh : ''}</div>
+    </div>`;
+
+    Object.keys(TEN_KY).forEach(ky => {
+      const diem = ketQua.diem[ky];
+      if (!diem) return;
+      html += `<div class="cuon-bang" style="margin-bottom:14px">
+        <table class="bang-diem">
+          <tr><th colspan="2">${TEN_KY[ky]}</th></tr>
+          ${monHocRows(diem)}
+        </table>
+      </div>`;
+    });
+
+    document.getElementById('ket-qua-ca-nhan').innerHTML = html;
+  }
+
+  function monHocRows(diem) {
+    const boQua = ['STT', 'Mã học sinh', 'Họ và tên', 'Ngày sinh'];
+    return Object.keys(diem)
+      .filter(k => !boQua.includes(k) && diem[k] !== '')
+      .map(k => `<tr><td>${k}</td><td>${diem[k]}</td></tr>`)
+      .join('');
+  }
+
+  // ====== TAB 2: XEM THEO LỚP / KỲ ======
+  document.getElementById('nut-xem-lop').addEventListener('click', () => {
+    const ky = document.getElementById('chon-ky-lop').value;
+    hienThongBao('thong-bao-lop', '', '');
+    document.getElementById('ket-qua-lop').innerHTML = 'Đang tải...';
+    document.getElementById('nut-xem-lop').disabled = true;
+
+    goiAPI('getDanhSachLop', { ky })
+      .then(ds => {
+        document.getElementById('nut-xem-lop').disabled = false;
+        renderDanhSachLop(ds);
+      })
+      .catch(loi => {
+        document.getElementById('nut-xem-lop').disabled = false;
+        document.getElementById('ket-qua-lop').innerHTML = '';
+        hienThongBao('thong-bao-lop', loi.message, 'loi');
+      });
+  });
+
+  function renderDanhSachLop(ds) {
+    if (!ds.length) {
+      document.getElementById('ket-qua-lop').innerHTML = '<p class="ghi-chu">Chưa có dữ liệu cho kỳ này.</p>';
+      return;
+    }
+    const cot = ['STT', 'Mã học sinh', 'Họ và tên', 'Toán học', 'Ngữ văn', 'Kết quả học tập'];
+    let html = `<div class="cuon-bang"><table class="bang-diem"><tr>${cot.map(c => `<th>${c}</th>`).join('')}</tr>`;
+    ds.forEach(hs => {
+      html += `<tr>${cot.map(c => `<td>${hs[c] || ''}</td>`).join('')}</tr>`;
+    });
+    html += '</table></div>';
+    document.getElementById('ket-qua-lop').innerHTML = html;
+  }
+
+  // ====== TAB 3: MỞ KHÓA QUẢN TRỊ ======
+  document.getElementById('nut-mo-khoa').addEventListener('click', () => {
+    const mk = document.getElementById('o-mat-khau').value;
+    if (!mk) return;
+
+    hienThongBao('thong-bao-khoa', '', '');
+    document.getElementById('nut-mo-khoa').disabled = true;
+
+    goiAPI('verifyPassword', { password: mk })
+      .then(() => {
+        matKhauPhien = mk;
+        document.getElementById('khu-vuc-khoa').classList.add('an');
+        document.getElementById('khu-vuc-admin').classList.remove('an');
+        document.getElementById('khu-vuc-import').classList.remove('an');
+      })
+      .catch(loi => {
+        document.getElementById('nut-mo-khoa').disabled = false;
+        hienThongBao('thong-bao-khoa', loi.message, 'loi');
+      });
+  });
+
+  // ====== KHỞI TẠO DATABASE ======
+  document.getElementById('nut-khoi-tao').addEventListener('click', () => {
+    hienThongBao('thong-bao-khoi-tao', '', '');
+    document.getElementById('nut-khoi-tao').disabled = true;
+
+    goiAPI('setupDatabase', { password: matKhauPhien })
+      .then(msg => {
+        document.getElementById('nut-khoi-tao').disabled = false;
+        hienThongBao('thong-bao-khoi-tao', msg, 'tot');
+      })
+      .catch(loi => {
+        document.getElementById('nut-khoi-tao').disabled = false;
+        hienThongBao('thong-bao-khoi-tao', loi.message, 'loi');
+      });
+  });
+
+  // ====== NHẬP EXCEL ======
+  document.getElementById('nut-nhap-excel').addEventListener('click', () => {
+    const ky = document.getElementById('chon-ky-import').value;
+    const file = document.getElementById('o-file-excel').files[0];
+    if (!file) {
+      hienThongBao('thong-bao-import', 'Chọn file Excel trước đã thầy ơi.', 'loi');
+      return;
+    }
+
+    hienThongBao('thong-bao-import', '', '');
+    document.getElementById('nut-nhap-excel').disabled = true;
+
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const records = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+        if (!records.length) {
+          document.getElementById('nut-nhap-excel').disabled = false;
+          hienThongBao('thong-bao-import', 'File không có dữ liệu.', 'loi');
+          return;
+        }
+
+        goiAPI('importExcel', { ky, records, password: matKhauPhien })
+          .then(soLuong => {
+            document.getElementById('nut-nhap-excel').disabled = false;
+            hienThongBao('thong-bao-import', `Đã nhập ${soLuong} dòng vào ${TEN_KY[ky]}.`, 'tot');
+          })
+          .catch(loi => {
+            document.getElementById('nut-nhap-excel').disabled = false;
+            hienThongBao('thong-bao-import', loi.message, 'loi');
+          });
+
+      } catch (err) {
+        document.getElementById('nut-nhap-excel').disabled = false;
+        hienThongBao('thong-bao-import', 'Không đọc được file: ' + err.message, 'loi');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+</script>
+
+</body>
+</html>
