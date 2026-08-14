@@ -67,7 +67,7 @@
       gap: 10px;
       padding: 20px 16px 0;
       overflow-x: auto;
-      max-width: 800px;
+      max-width: 1400px;
       margin: 0 auto;
       scrollbar-width: none;
     }
@@ -102,7 +102,7 @@
     }
 
     main {
-      max-width: 800px;
+      max-width: 1400px;
       margin: 0 auto;
       padding: 20px 16px 60px;
     }
@@ -696,15 +696,25 @@
     }
     const cotDiem = (ky === 'CaNam') ? 'TB Cả năm' : 'ĐTB mhk';
     const cot = Object.keys(ds[0]);
-    let html = `<div class="cuon-bang"><table class="bang-diem"><tr>${cot.map(c => `<th>${c}</th>`).join('')}<th>Xếp loại</th></tr>`;
+    
+    // Đặt cột Xếp loại trước Nhận xét hoặc Ghi chú
+    const columnsToRender = [];
+    cot.forEach(c => {
+      if (c === 'Nhận xét' || c === 'Ghi chú') columnsToRender.push('Xếp loại');
+      columnsToRender.push(c);
+    });
+    if (!columnsToRender.includes('Xếp loại')) columnsToRender.push('Xếp loại');
+
+    let html = `<div class="cuon-bang"><table class="bang-diem"><tr>${columnsToRender.map(c => `<th>${c}</th>`).join('')}</tr>`;
     ds.forEach(hs => {
       const xl = xepLoaiDiem(hs[cotDiem]);
-      html += `<tr>${cot.map(c => {
+      html += `<tr>${columnsToRender.map(c => {
+         if (c === 'Xếp loại') return `<td>${xl}</td>`;
          const val = hs[c] || '';
          const boQuaToMau = ['STT', 'Lớp', 'Họ', 'Tên', 'Nhận xét', 'Ghi chú'];
          const valFmt = boQuaToMau.includes(c) ? val : formatDiem(val);
          return `<td>${valFmt}</td>`;
-      }).join('')}<td>${xl}</td></tr>`;
+      }).join('')}</tr>`;
     });
     html += '</table></div>';
     document.getElementById('ket-qua-lop').innerHTML = html;
