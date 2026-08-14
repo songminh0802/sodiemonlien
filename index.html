@@ -1178,10 +1178,47 @@
             else if (tc === 'Tên') obj[tc] = ten;
             else {
                let val = colMapping[tc] !== undefined ? row[colMapping[tc]] : '';
-               if (typeof val === 'string') val = val.trim();
+               if (typeof val === 'string') {
+                   val = val.trim();
+                   // Xử lý lỗi Excel tự động format số 10 thành 1000%
+                   if (val.endsWith('%')) {
+                       const parsed = parseFloat(val);
+                       if (!isNaN(parsed)) val = (parsed / 100).toString().replace('.', ',');
+                   }
+               }
                obj[tc] = val;
             }
           });
+
+          // TỰ ĐỘNG TÍNH ĐIỂM TRUNG BÌNH THEO THÔNG TƯ 22
+          if (ky === 'HK1' || ky === 'HK2') {
+              let sumTX = 0;
+              let countTX = 0;
+              ['TX1', 'TX2', 'TX3', 'TX4'].forEach(tx => {
+                 const v = parseFloat(String(obj[tx]).replace(',', '.'));
+                 if (!isNaN(v)) { sumTX += v; countTX++; }
+              });
+              
+              const vGk = parseFloat(String(obj['ĐĐGgk']).replace(',', '.'));
+              const vCk = parseFloat(String(obj['ĐĐGck']).replace(',', '.'));
+              
+              let totalScore = sumTX;
+              let totalWeight = countTX;
+              
+              if (!isNaN(vGk)) { totalScore += vGk * 2; totalWeight += 2; }
+              if (!isNaN(vCk)) { totalScore += vCk * 3; totalWeight += 3; }
+              
+              if (totalWeight > 0) {
+                 obj['ĐTB mhk'] = (Math.round((totalScore / totalWeight) * 10) / 10).toFixed(1).replace('.', ',');
+              }
+          } else if (ky === 'CaNam') {
+              const hk1 = parseFloat(String(obj['TBHK 1']).replace(',', '.'));
+              const hk2 = parseFloat(String(obj['TBHK 2']).replace(',', '.'));
+              if (!isNaN(hk1) && !isNaN(hk2)) {
+                  obj['TB Cả năm'] = (Math.round((hk1 + 2 * hk2) / 3 * 10) / 10).toFixed(1).replace('.', ',');
+              }
+          }
+
           records.push(obj);
         }
 
