@@ -202,10 +202,10 @@
     <section id="khung-ca-nhan" class="khung dang-chon">
       <div class="the">
         <div class="hang-nhap">
-          <input type="text" id="o-ma-hs" placeholder="Nhập Mã học sinh...">
+          <input type="text" id="o-ma-hs" placeholder="Nhập chính xác Họ và tên...">
           <button class="nut" id="nut-tra-cuu">Tra cứu</button>
         </div>
-        <p class="ghi-chu">Kết quả hiển thị điểm của học sinh ở cả 5 kỳ (nếu có).</p>
+        <p class="ghi-chu">Kết quả hiển thị điểm của học sinh ở cả 3 kỳ (nếu có).</p>
         <div id="thong-bao-ca-nhan"></div>
         <div id="ket-qua-ca-nhan"></div>
       </div>
@@ -216,11 +216,9 @@
       <div class="the">
         <div class="hang-nhap">
           <select id="chon-ky-lop">
-            <option value="Diem_GK1">Giữa kỳ 1</option>
-            <option value="Diem_CK1">Cuối kỳ 1</option>
-            <option value="Diem_GK2">Giữa kỳ 2</option>
-            <option value="Diem_CK2">Cuối kỳ 2</option>
-            <option value="Diem_CaNam">Cả năm</option>
+            <option value="HK1">Học kỳ 1</option>
+            <option value="HK2">Học kỳ 2</option>
+            <option value="CaNam">Cả năm</option>
           </select>
           <button class="nut" id="nut-xem-lop">Xem danh sách</button>
         </div>
@@ -255,11 +253,9 @@
         <p class="ghi-chu">Chọn kỳ, sau đó chọn file Excel (.xlsx) có dòng tiêu đề trùng tên cột trong Google Sheet. Dữ liệu cũ của kỳ này sẽ được thay thế hoàn toàn bằng file mới.</p>
         <div class="hang-nhap">
           <select id="chon-ky-import">
-            <option value="Diem_GK1">Giữa kỳ 1</option>
-            <option value="Diem_CK1">Cuối kỳ 1</option>
-            <option value="Diem_GK2">Giữa kỳ 2</option>
-            <option value="Diem_CK2">Cuối kỳ 2</option>
-            <option value="Diem_CaNam">Cả năm</option>
+            <option value="HK1">Học kỳ 1</option>
+            <option value="HK2">Học kỳ 2</option>
+            <option value="CaNam">Cả năm</option>
           </select>
         </div>
         <div class="hang-nhap">
@@ -311,17 +307,17 @@
   });
 
   function traCuuCaNhan() {
-    const maHS = document.getElementById('o-ma-hs').value.trim();
-    if (!maHS) return;
+    const hoTen = document.getElementById('o-ma-hs').value.trim();
+    if (!hoTen) return;
 
     hienThongBao('thong-bao-ca-nhan', '', '');
     document.getElementById('ket-qua-ca-nhan').innerHTML = 'Đang tra cứu...';
     document.getElementById('nut-tra-cuu').disabled = true;
 
-    goiAPI('getTraCuuCaNhan', { maHS })
-      .then(ketQua => {
+    goiAPI('getTraCuuCaNhan', { hoTen })
+      .then(ketQuaArray => {
         document.getElementById('nut-tra-cuu').disabled = false;
-        renderTraCuu(ketQua);
+        renderTraCuu(ketQuaArray);
       })
       .catch(loi => {
         document.getElementById('nut-tra-cuu').disabled = false;
@@ -331,36 +327,38 @@
   }
 
   const TEN_KY = {
-    Diem_GK1: 'Giữa kỳ 1', Diem_CK1: 'Cuối kỳ 1',
-    Diem_GK2: 'Giữa kỳ 2', Diem_CK2: 'Cuối kỳ 2', Diem_CaNam: 'Cả năm'
+    HK1: 'Học kỳ 1', HK2: 'Học kỳ 2', CaNam: 'Cả năm'
   };
 
-  function renderTraCuu(ketQua) {
-    const tt = ketQua.thongTin;
-    let html = `<div class="the-ket-qua">
-      <h3>${tt.hoTen}</h3>
-      <div class="ma">Mã học sinh: ${tt.maHS}${tt.ngaySinh ? ' • Ngày sinh: ' + tt.ngaySinh : ''}</div>
-    </div>`;
-
-    Object.keys(TEN_KY).forEach(ky => {
-      const diem = ketQua.diem[ky];
-      if (!diem) return;
-      html += `<div class="cuon-bang" style="margin-bottom:14px">
-        <table class="bang-diem">
-          <tr><th colspan="2">${TEN_KY[ky]}</th></tr>
-          ${monHocRows(diem)}
-        </table>
+  function renderTraCuu(ketQuaArray) {
+    let html = '';
+    ketQuaArray.forEach(ketQua => {
+      const tt = ketQua.thongTin;
+      html += `<div class="the-ket-qua" style="margin-bottom: 20px;">
+        <h3>${tt.hoTen}</h3>
+        <div class="ma">STT: ${tt.stt}</div>
       </div>`;
+
+      Object.keys(TEN_KY).forEach(ky => {
+        const diem = ketQua.diem[ky];
+        if (!diem) return;
+        html += `<div class="cuon-bang" style="margin-bottom:14px">
+          <table class="bang-diem">
+            <tr><th colspan="2">${TEN_KY[ky]}</th></tr>
+            ${monHocRows(diem)}
+          </table>
+        </div>`;
+      });
     });
 
     document.getElementById('ket-qua-ca-nhan').innerHTML = html;
   }
 
   function monHocRows(diem) {
-    const boQua = ['STT', 'Mã học sinh', 'Họ và tên', 'Ngày sinh'];
+    const boQua = ['STT', 'Họ và tên'];
     return Object.keys(diem)
       .filter(k => !boQua.includes(k) && diem[k] !== '')
-      .map(k => `<tr><td>${k}</td><td>${diem[k]}</td></tr>`)
+      .map(k => `<tr><td style="font-weight: 500">${k}</td><td>${diem[k]}</td></tr>`)
       .join('');
   }
 
@@ -388,7 +386,7 @@
       document.getElementById('ket-qua-lop').innerHTML = '<p class="ghi-chu">Chưa có dữ liệu cho kỳ này.</p>';
       return;
     }
-    const cot = ['STT', 'Mã học sinh', 'Họ và tên', 'Toán học', 'Ngữ văn', 'Kết quả học tập'];
+    const cot = Object.keys(ds[0]);
     let html = `<div class="cuon-bang"><table class="bang-diem"><tr>${cot.map(c => `<th>${c}</th>`).join('')}</tr>`;
     ds.forEach(hs => {
       html += `<tr>${cot.map(c => `<td>${hs[c] || ''}</td>`).join('')}</tr>`;
