@@ -870,11 +870,7 @@
         document.getElementById('nut-xem-thong-ke').disabled = false;
         
         // Cập nhật ĐTB động trước khi phân tích
-        if (lop === 'ALL') {
-             ds.forEach(lopData => lopData.data.forEach(hs => autoCalculateTT22(hs, ky)));
-        } else {
-             ds.forEach(hs => autoCalculateTT22(hs, ky));
-        }
+        ds.forEach(hs => autoCalculateTT22(hs, ky));
         
         renderThongKe(ds, ky, lop);
       })
