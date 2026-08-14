@@ -135,14 +135,20 @@
     }
     
     .the:hover {
-      box-shadow: var(--shadow-md);
+      box-shadow: var(--shadow-sm);
+      animation: fadeInUp 0.5s ease forwards;
     }
-
-    .hang-nhap {
-      display: flex;
-      gap: 12px;
+    
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(15px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .hang-nhap { 
+      display: flex; 
+      gap: 12px; 
       flex-wrap: wrap;
-      margin-bottom: 12px;
+      margin-bottom: 12px; 
     }
 
     input[type="text"], input[type="password"], input[type="file"], select {
@@ -413,6 +419,7 @@
             <option value="">-- Chọn lớp --</option>
           </select>
           <button class="nut" id="nut-xem-thong-ke">Xem thống kê</button>
+          <button class="nut" id="nut-xuat-excel-tk" style="display:none; background:var(--success)">Tải về Excel</button>
         </div>
         <p class="ghi-chu">Hệ thống sẽ tự động tổng hợp Sĩ số, Điểm trung bình và tỷ lệ Xếp loại của lớp.</p>
         <div id="thong-bao-thong-ke"></div>
@@ -466,11 +473,12 @@
     <!-- TAB 1: TRA CỨU CÁ NHÂN -->
     <section id="khung-ca-nhan" class="khung">
       <div class="the">
-        <div class="hang-nhap">
-          <input type="text" id="o-ma-hs" placeholder="Nhập chính xác Họ và tên...">
+        <div class="hang-nhap" style="justify-content: center; flex-wrap: wrap;">
+          <input type="text" id="o-ma-hs" placeholder="Nhập chính xác Họ và tên..." style="flex: 1; min-width: 200px;">
+          <input type="text" id="o-ngay-sinh" placeholder="Ngày sinh (vd: 15/08/2011)" style="flex: 1; min-width: 200px;">
           <button class="nut" id="nut-tra-cuu">Tra cứu</button>
         </div>
-        <p class="ghi-chu">Kết quả hiển thị điểm của học sinh ở cả 3 kỳ (nếu có).</p>
+        <p class="ghi-chu">Để bảo mật thông tin, vui lòng nhập chính xác <b>Họ và tên</b> cùng <b>Ngày sinh</b> của học sinh.</p>
         <div id="thong-bao-ca-nhan"></div>
         <div id="ket-qua-ca-nhan"></div>
       </div>
@@ -489,6 +497,7 @@
             <option value="">-- Chọn lớp --</option>
           </select>
           <button class="nut" id="nut-xem-lop">Xem danh sách</button>
+          <button class="nut" id="nut-xuat-excel-lop" style="display:none; background:var(--success)">Tải về Excel</button>
         </div>
         <div id="thong-bao-lop"></div>
         <div id="ket-qua-lop"></div>
@@ -599,13 +608,18 @@
 
   function traCuuCaNhan() {
     const hoTen = document.getElementById('o-ma-hs').value.trim();
-    if (!hoTen) return;
+    const ngaySinh = document.getElementById('o-ngay-sinh').value.trim();
+    
+    if (!hoTen || !ngaySinh) {
+        hienThongBao('thong-bao-ca-nhan', 'Vui lòng điền đủ Họ Tên và Ngày sinh.', 'loi');
+        return;
+    }
 
     hienThongBao('thong-bao-ca-nhan', '', '');
     document.getElementById('ket-qua-ca-nhan').innerHTML = 'Đang tra cứu...';
     document.getElementById('nut-tra-cuu').disabled = true;
 
-    goiAPI('getTraCuuCaNhan', { hoTen })
+    goiAPI('getTraCuuCaNhan', { hoTen, ngaySinh })
       .then(ketQuaArray => {
         document.getElementById('nut-tra-cuu').disabled = false;
         renderTraCuu(ketQuaArray);
@@ -678,28 +692,111 @@
 
   function renderTraCuu(ketQuaArray) {
     let html = '';
-    ketQuaArray.forEach(ketQua => {
+    ketQuaArray.forEach((ketQua, index) => {
       const tt = ketQua.thongTin;
-      html += `<div class="the-ket-qua" style="margin-bottom: 20px;">
-        <h3>${tt.hoTen}</h3>
-        <div class="ma">STT: ${tt.stt} ${tt.lop ? ' - Lớp: ' + tt.lop : ''}</div>
-      </div>`;
+      const chartId = `radar-chart-${index}`;
+      
+      html += `<div class="the-ket-qua" style="margin-bottom: 30px;">
+        <h3 style="margin-bottom: 8px; color: var(--primary); display: flex; align-items: center; gap: 8px;">🎓 ${tt.hoTen}</h3>
+        <div class="ma" style="margin-bottom: 20px;">
+           <span style="background: #e0e7ff; color: #4338ca; padding: 4px 8px; border-radius: 4px; font-weight: 500; font-size: 0.9rem;">Lớp: ${tt.lop || 'Chưa xếp'}</span>
+           <span style="background: #f3f4f6; padding: 4px 8px; border-radius: 4px; font-size: 0.9rem; margin-left: 8px;">Ngày sinh: ${tt.ngaySinh || '---'}</span>
+        </div>
+        
+        <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start;">
+           <div style="flex: 2; min-width: 300px;">
+      `;
+
+      // Cấu trúc dữ liệu để vẽ biểu đồ Mạng nhện
+      const radarLabels = [];
+      const radarDiemCaNhan = [];
+      const radarDiemLop = [];
 
       Object.keys(TEN_KY).forEach(ky => {
         const diem = ketQua.diem[ky];
         if (!diem) return;
         
         autoCalculateTT22(diem, ky); // Tự động tính toán lại
+        const classAvg = ketQua.classAvg ? ketQua.classAvg[ky] : null;
+        
         const cotDiem = (ky === 'CaNam') ? 'TB Cả năm' : 'ĐTB mhk';
         const xl = xepLoaiDiem(diem[cotDiem]);
 
-        html += `<div class="cuon-bang" style="margin-bottom:14px">
-          <table class="bang-diem">
-            <tr><th colspan="2">${TEN_KY[ky]} ${xl ? ' | Xếp loại: ' + xl : ''}</th></tr>
+        // Push data to Radar
+        const d_cn = parseFloat(String(diem[cotDiem] || '').replace(',', '.'));
+        const d_lop = classAvg ? parseFloat(String(classAvg[cotDiem] || '').replace(',', '.')) : NaN;
+        if (!isNaN(d_cn)) {
+            radarLabels.push(TEN_KY[ky]);
+            radarDiemCaNhan.push(d_cn);
+            radarDiemLop.push(isNaN(d_lop) ? d_cn : d_lop); // nếu k có điểm lớp thì cho bằng điểm cá nhân để khỏi lỗi
+        }
+
+        html += `<div class="cuon-bang" style="margin-bottom:14px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden;">
+          <table class="bang-diem" style="margin: 0;">
+            <tr><th colspan="2" style="background: #f8fafc; color: var(--text-main);">${TEN_KY[ky]} ${xl ? ' | Xếp loại: ' + xl : ''}</th></tr>
             ${monHocRows(diem)}
           </table>
         </div>`;
       });
+      
+      html += `</div>
+           <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 20px; background: #fff; border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow-sm);">
+              <h4 style="margin-top: 0; margin-bottom: 15px; color: var(--text-main);">Biểu đồ Năng lực</h4>
+              <canvas id="${chartId}" style="max-width: 100%;"></canvas>
+              <p style="margin-top: 15px; font-size: 0.85rem; color: var(--text-muted); text-align: center;">So sánh điểm trung bình của học sinh với điểm trung bình toàn lớp.</p>
+           </div>
+        </div>
+      </div>`;
+      
+      // Delay vẽ biểu đồ vì phần tử canvas chưa được render ra DOM
+      setTimeout(() => {
+          const ctx = document.getElementById(chartId);
+          if (ctx && radarLabels.length > 0) {
+              new Chart(ctx.getContext('2d'), {
+                  type: 'radar',
+                  data: {
+                      labels: radarLabels,
+                      datasets: [
+                          {
+                              label: 'Điểm cá nhân',
+                              data: radarDiemCaNhan,
+                              backgroundColor: 'rgba(79, 70, 229, 0.2)',
+                              borderColor: 'rgba(79, 70, 229, 1)',
+                              pointBackgroundColor: 'rgba(79, 70, 229, 1)',
+                              pointBorderColor: '#fff',
+                              pointHoverBackgroundColor: '#fff',
+                              pointHoverBorderColor: 'rgba(79, 70, 229, 1)'
+                          },
+                          {
+                              label: 'ĐTB Lớp',
+                              data: radarDiemLop,
+                              backgroundColor: 'rgba(156, 163, 175, 0.2)',
+                              borderColor: 'rgba(156, 163, 175, 1)',
+                              pointBackgroundColor: 'rgba(156, 163, 175, 1)',
+                              pointBorderColor: '#fff',
+                              pointHoverBackgroundColor: '#fff',
+                              pointHoverBorderColor: 'rgba(156, 163, 175, 1)',
+                              borderDash: [5, 5]
+                          }
+                      ]
+                  },
+                  options: {
+                      responsive: true,
+                      scales: {
+                          r: {
+                              angleLines: { display: true },
+                              suggestedMin: 0,
+                              suggestedMax: 10
+                          }
+                      },
+                      plugins: {
+                          legend: { position: 'bottom' }
+                      }
+                  }
+              });
+          }
+      }, 50);
+
     });
 
     document.getElementById('ket-qua-ca-nhan').innerHTML = html;
@@ -745,11 +842,16 @@
     goiAPI('getDanhSachLop', { ky, lop })
       .then(ds => {
         document.getElementById('nut-xem-lop').disabled = false;
-        renderDanhSachLop(ds, ky);
+        renderDanhSachLop(ds, ky, lop);
+        
+        // Hiện nút Tải về Excel
+        const btnExcel = document.getElementById('nut-xuat-excel-lop');
+        btnExcel.style.display = 'inline-block';
+        btnExcel.onclick = () => xuatExcelBaoCao(ds, `DanhSach_${ky}_${lop}`);
       })
       .catch(loi => {
         document.getElementById('nut-xem-lop').disabled = false;
-        document.getElementById('ket-qua-lop').innerHTML = '';
+        document.getElementById('nut-xuat-excel-lop').style.display = 'none';
         hienThongBao('thong-bao-lop', loi.message, 'loi');
       });
   });
@@ -889,6 +991,11 @@
       .then(ds => {
         document.getElementById('nut-xem-thong-ke').disabled = false;
         
+        // Hiện nút Tải về Excel
+        const btnExcel = document.getElementById('nut-xuat-excel-tk');
+        btnExcel.style.display = 'inline-block';
+        btnExcel.onclick = () => xuatExcelBaoCao(ds, `ThongKe_${ky}_${lop}`);
+        
         // Cập nhật ĐTB động trước khi phân tích
         ds.forEach(hs => autoCalculateTT22(hs, ky));
         
@@ -896,9 +1003,20 @@
       })
       .catch(loi => {
         document.getElementById('nut-xem-thong-ke').disabled = false;
+        document.getElementById('nut-xuat-excel-tk').style.display = 'none';
         hienThongBao('thong-bao-thong-ke', loi.message, 'loi');
       });
   });
+  
+  // Hàm xuất Excel sử dụng thư viện SheetJS
+  function xuatExcelBaoCao(ds, tenFile) {
+      if (!ds || ds.length === 0) return;
+      
+      const ws = XLSX.utils.json_to_sheet(ds);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "DanhSach");
+      XLSX.writeFile(wb, `${tenFile}.xlsx`);
+  }
 
   function renderThongKe(ds, ky, lop) {
     if (!ds.length) {
