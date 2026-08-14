@@ -388,6 +388,34 @@
         padding-bottom: 100px;
       }
     }
+    
+    /* CẤU HÌNH IN BÁO CÁO (PRINT) */
+    @media print {
+      body { background: #fff; margin: 0; padding: 0; font-family: 'Times New Roman', serif; }
+      header.trang, nav.tab, .hang-nhap, .ghi-chu, #thong-bao-thong-ke, #thong-bao-lop, .khoa-quan-tri { display: none !important; }
+      .the { box-shadow: none !important; border: none !important; padding: 0 !important; }
+      
+      .chi-hien-khi-in { display: block !important; }
+      
+      /* Chỉnh sửa thẻ số liệu cho in đen trắng */
+      .the-so { border: 1px solid #ccc !important; page-break-inside: avoid; }
+      
+      /* Mở rộng các cột ra full ngang */
+      .luoi-thong-ke { grid-template-columns: repeat(3, 1fr) !important; display: flex; justify-content: space-between; }
+      
+      /* Chống bị cắt ngang biểu đồ hoặc bảng khi sang trang mới */
+      .bieu-do-container, .cuon-bang, #vinh-danh-container, #can-ho-tro-container { page-break-inside: avoid; }
+      
+      table.bang-diem th { background-color: #f0f0f0 !important; color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      
+      /* Ẩn các tab không chọn */
+      .khung { display: none !important; }
+      .khung.dang-chon { display: block !important; }
+    }
+
+    @media screen {
+      .chi-hien-khi-in { display: none !important; }
+    }
   </style>
 </head>
 <body>
@@ -419,11 +447,29 @@
           </select>
           <button class="nut" id="nut-xem-thong-ke">Xem thống kê</button>
           <button class="nut" id="nut-xuat-excel-tk" style="display:none; background:var(--success)">Tải về Excel</button>
+          <button class="nut" id="nut-in-thong-ke" style="display:none; background:#0ea5e9">🖨️ In Báo Cáo</button>
         </div>
         <p class="ghi-chu">Hệ thống sẽ tự động tổng hợp Sĩ số, Điểm trung bình và tỷ lệ Xếp loại của lớp.</p>
         <div id="thong-bao-thong-ke"></div>
         
         <div id="ket-qua-thong-ke" class="an">
+           
+           <!-- HEADER IN BÁO CÁO -->
+           <div id="print-header" class="chi-hien-khi-in">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 20px; font-size: 1.1rem;">
+                <div style="text-align:center; font-weight:bold;">
+                  BỘ GIÁO DỤC VÀ ĐÀO TẠO<br>
+                  <span style="text-decoration:underline;">TRƯỜNG THCS TÂN BÌNH</span>
+                </div>
+                <div style="text-align:center; font-weight:bold;">
+                  CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM<br>
+                  <span style="text-decoration:underline;">Độc lập - Tự do - Hạnh phúc</span>
+                </div>
+              </div>
+              <h2 style="text-align:center; margin-top:40px; text-transform:uppercase; font-size: 1.5rem;">BÁO CÁO THỐNG KÊ KẾT QUẢ HỌC TẬP</h2>
+              <p style="text-align:center; font-style:italic; font-size: 1.1rem; margin-bottom: 30px;" id="print-subtitle"></p>
+           </div>
+
            <div class="luoi-thong-ke">
               <div class="the-so">
                  <div class="tieu-de">Tổng Sĩ Số</div>
@@ -465,6 +511,24 @@
            </div>
            
            <div id="bang-chi-tiet-lop-container" style="margin-top: 30px; width: 100%;"></div>
+           
+           <!-- Bảng Khen thưởng Tự động -->
+           <div id="bang-khen-thuong-container" style="margin-top: 30px; width: 100%; page-break-before: always;"></div>
+           
+           <!-- FOOTER IN BÁO CÁO -->
+           <div id="print-footer" class="chi-hien-khi-in" style="margin-top: 50px; page-break-inside: avoid;">
+              <div style="display:flex; justify-content:space-between; padding: 0 50px; font-size: 1.1rem;">
+                <div style="text-align:center;">
+                  <strong>XÁC NHẬN CỦA NHÀ TRƯỜNG</strong><br>
+                  <span style="font-style:italic;">(Ký và ghi rõ họ tên)</span>
+                </div>
+                <div style="text-align:center;">
+                  <strong>GIÁO VIÊN BỘ MÔN</strong><br>
+                  <span style="font-style:italic;">(Ký và ghi rõ họ tên)</span>
+                </div>
+              </div>
+           </div>
+           
         </div>
       </div>
     </section>
@@ -585,8 +649,6 @@
     o.innerHTML = noiDung ? `<div class="thong-bao ${loai}">${noiDung}</div>` : '';
   }
 
-  // ====== TAB 1: TRA CỨU CÁ NHÂN ======
-  document.getElementById('nut-tra-cuu').addEventListener('click', traCuuCaNhan);
 
   const TEN_KY = {
     HK1: 'Học kỳ 1', HK2: 'Học kỳ 2', CaNam: 'Cả năm'
@@ -701,7 +763,29 @@
     ds.forEach(hs => autoCalculateTT22(hs, ky));
 
     const cotDiem = (ky === 'CaNam') ? 'TB Cả năm' : 'ĐTB mhk';
-    const cot = Object.keys(ds[0]);
+    
+    // Tự động tính Xếp hạng (Rank)
+    let validForRank = ds.filter(hs => hs[cotDiem] !== undefined && hs[cotDiem].toString().trim() !== '');
+    validForRank.sort((a, b) => {
+        const dA = parseFloat(a[cotDiem].toString().replace(',', '.'));
+        const dB = parseFloat(b[cotDiem].toString().replace(',', '.'));
+        return dB - dA;
+    });
+    
+    let currentRank = 1;
+    let previousScore = -1;
+    validForRank.forEach((hs, i) => {
+        const score = parseFloat(hs[cotDiem].toString().replace(',', '.'));
+        if (i > 0 && score === previousScore) {
+            hs['Xếp hạng'] = currentRank;
+        } else {
+            currentRank = i + 1;
+            hs['Xếp hạng'] = currentRank;
+            previousScore = score;
+        }
+    });
+
+    const cot = Object.keys(ds[0]).filter(c => c !== 'Xếp hạng'); // lọc bỏ nếu đã tồn tại để chèn vào vị trí mong muốn
     
     // Tự động phát hiện và cảnh báo học sinh thiếu điểm TX
     let warningHtml = '';
@@ -730,19 +814,22 @@
         }
     }
     
-    // Đặt cột Xếp loại trước Nhận xét hoặc Ghi chú
+    // Đặt cột Xếp loại và Xếp hạng trước Nhận xét hoặc Ghi chú
     const columnsToRender = [];
     cot.forEach(c => {
-      if (c === 'Nhận xét' || c === 'Ghi chú') columnsToRender.push('Xếp loại');
+      if (c === 'Nhận xét' || c === 'Ghi chú') columnsToRender.push('Xếp loại', 'Xếp hạng');
       columnsToRender.push(c);
     });
-    if (!columnsToRender.includes('Xếp loại')) columnsToRender.push('Xếp loại');
+    if (!columnsToRender.includes('Xếp loại')) columnsToRender.push('Xếp loại', 'Xếp hạng');
 
     let html = `<div class="cuon-bang"><table class="bang-diem"><tr>${columnsToRender.map(c => `<th>${c}</th>`).join('')}</tr>`;
     ds.forEach(hs => {
       const xl = xepLoaiDiem(hs[cotDiem]);
+      const hang = hs['Xếp hạng'] ? `<span style="font-weight: bold; color: var(--primary)">${hs['Xếp hạng']}</span>` : '-';
+      
       html += `<tr>${columnsToRender.map(c => {
          if (c === 'Xếp loại') return `<td>${xl}</td>`;
+         if (c === 'Xếp hạng') return `<td style="text-align: center">${hang}</td>`;
          const val = hs[c] || '';
          const boQuaToMau = ['STT', 'Lớp', 'Họ', 'Tên', 'Nhận xét', 'Ghi chú'];
          const valFmt = boQuaToMau.includes(c) ? val : formatDiem(val);
@@ -809,6 +896,10 @@
   let bieuDoXepLoai = null;
   let bieuDoPhoDiem = null;
 
+  document.getElementById('nut-in-thong-ke').addEventListener('click', () => {
+    window.print();
+  });
+
   document.getElementById('nut-xem-thong-ke').addEventListener('click', () => {
     const ky = document.getElementById('chon-ky-thong-ke').value;
     const lop = document.getElementById('chon-lop-thong-ke').value;
@@ -826,10 +917,12 @@
       .then(ds => {
         document.getElementById('nut-xem-thong-ke').disabled = false;
         
-        // Hiện nút Tải về Excel
+        // Hiện nút Tải về Excel và In Báo cáo
         const btnExcel = document.getElementById('nut-xuat-excel-tk');
         btnExcel.style.display = 'inline-block';
         btnExcel.onclick = () => xuatExcelBaoCao(ds, `ThongKe_${ky}_${lop}`);
+        
+        document.getElementById('nut-in-thong-ke').style.display = 'inline-block';
         
         // Cập nhật ĐTB động trước khi phân tích
         ds.forEach(hs => autoCalculateTT22(hs, ky));
@@ -839,6 +932,7 @@
       .catch(loi => {
         document.getElementById('nut-xem-thong-ke').disabled = false;
         document.getElementById('nut-xuat-excel-tk').style.display = 'none';
+        document.getElementById('nut-in-thong-ke').style.display = 'none';
         hienThongBao('thong-bao-thong-ke', loi.message, 'loi');
       });
   });
@@ -860,6 +954,11 @@
     }
 
     document.getElementById('ket-qua-thong-ke').classList.remove('an');
+    
+    // Cập nhật tiêu đề In ấn
+    const tenKyStr = TEN_KY[ky] || ky;
+    const lopStr = lop === 'ALL' ? 'Toàn trường / Toàn khối' : `Lớp ${lop}`;
+    document.getElementById('print-subtitle').innerText = `Kỳ báo cáo: ${tenKyStr} - Đối tượng: ${lopStr}`;
 
     let tongDiem = 0;
     let maxDiem = -1;
@@ -1110,6 +1209,43 @@
       bangChiTiet.innerHTML = htmlChiTiet;
     } else {
       bangChiTiet.innerHTML = '';
+    }
+    
+    // 5. Danh sách Khen thưởng tự động
+    const khenThuongContainer = document.getElementById('bang-khen-thuong-container');
+    if (ky === 'CaNam' || ky === 'HK2') {
+        const hxGiỏi = validStudents.filter(item => item.diem >= 8.0);
+        const hxTiênTiến = validStudents.filter(item => item.diem >= 6.5 && item.diem < 8.0);
+        
+        let ktHtml = `
+            <h3 style="text-align: center; font-size: 1.3rem; margin-top: 20px; font-weight: bold; text-transform: uppercase; color: var(--text-main);">DANH SÁCH ĐỀ NGHỊ KHEN THƯỞNG ${ky === 'CaNam' ? 'CẢ NĂM' : 'HỌC KỲ 2'}</h3>
+        `;
+        
+        const renderDanhSach = (title, list) => {
+            if (list.length === 0) return '';
+            list.sort((a, b) => b.diem - a.diem);
+            let h = `<h4 style="margin-bottom: 10px; font-size: 1.1rem; text-decoration: underline;">${title} (${list.length} học sinh):</h4>
+            <div class="cuon-bang" style="margin-bottom: 20px;">
+              <table class="bang-diem">
+                <tr><th style="width: 50px;">STT</th><th>Họ và Tên</th><th>Lớp</th><th style="text-align: center;">Điểm TB</th></tr>`;
+            list.forEach((item, i) => {
+                const hoTen = (item.hs['Họ'] || '') + ' ' + (item.hs['Tên'] || '');
+                h += `<tr><td style="text-align: center;">${i+1}</td><td>${hoTen.trim()}</td><td>${item.hs['Lớp'] || lop}</td><td style="text-align: center; font-weight: bold;">${item.diem.toFixed(1).replace('.', ',')}</td></tr>`;
+            });
+            h += `</table></div>`;
+            return h;
+        };
+        
+        ktHtml += renderDanhSach("I. Danh sách Học sinh Tốt (Xuất sắc / Giỏi)", hxGiỏi);
+        ktHtml += renderDanhSach("II. Danh sách Học sinh Khá (Tiên tiến)", hxTiênTiến);
+        
+        if (hxGiỏi.length === 0 && hxTiênTiến.length === 0) {
+             ktHtml += `<p style="text-align:center; font-style: italic;">Chưa có học sinh đủ điều kiện khen thưởng.</p>`;
+        }
+        
+        khenThuongContainer.innerHTML = ktHtml;
+    } else {
+        khenThuongContainer.innerHTML = '';
     }
 
     veBieuDo(mucLoai, phoDiem);
