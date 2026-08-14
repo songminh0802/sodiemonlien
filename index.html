@@ -1027,28 +1027,10 @@
         colMapping['STT'] = sttMatch ? sttMatch.c : 2; // Mặc định C (index 2)
         
         // --- ÉP CỨNG VỊ TRÍ CỘT HỌ VÀ TÊN ---
-        // Người dùng yêu cầu chuẩn xác: Cột D (index 3) là Họ, Cột E (index 4) là Tên. 
-        // Bỏ qua cột B (Mã HS).
-        let hoCol = 3;
-        let tenCol = 4;
-
-        // Kiểm tra thử 10 dòng dữ liệu đầu tiên xem cột Tên (E) có dữ liệu không
-        // (Tránh trường hợp import nhầm file chỉ có 1 cột Họ và tên gộp chung)
-        let hasDataInTenCol = false;
-        let testStartIdx = headerRowIdx + 1;
-        for (let r = testStartIdx; r < Math.min(testStartIdx + 10, rawData.length); r++) {
-           if (rawData[r] && rawData[r][tenCol] !== undefined && rawData[r][tenCol].toString().trim() !== '') {
-               hasDataInTenCol = true;
-               break;
-           }
-        }
-
-        colMapping['Họ'] = hoCol;
-        if (hasDataInTenCol) {
-           colMapping['Tên'] = tenCol;
-        } else {
-           colMapping['Tên'] = null; // Cờ đánh dấu để tự tách Tên từ cột Họ
-        }
+        // Bỏ qua cột B (Mã HS) và Bỏ luôn cột E theo yêu cầu.
+        // Chỉ lấy duy nhất cột D (index 3) chứa toàn bộ Họ và Tên, sau đó hệ thống tự tách.
+        colMapping['Họ'] = 3;
+        colMapping['Tên'] = null; // Cờ đánh dấu: Bắt buộc tự tách Tên từ cột Họ (cột D)
 
         targetCols.forEach(tc => {
           if (tc === 'Họ' || tc === 'Tên' || tc === 'STT') return; // Đã xử lý ở trên
