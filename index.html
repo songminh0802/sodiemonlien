@@ -539,14 +539,17 @@
   function loadDanhSachLop() {
     goiAPI('getDanhSachLopHoc')
       .then(lops => {
-         let html = '<option value="">-- Chọn lớp --</option>';
-         lops.forEach(l => html += `<option value="${l}">${l}</option>`);
+         let htmlTk = '<option value="">-- Chọn lớp --</option><option value="ALL" style="font-weight:bold; color:var(--primary)">-- Tất cả các lớp --</option>';
+         lops.forEach(l => htmlTk += `<option value="${l}">${l}</option>`);
          
          const chonLopTk = document.getElementById('chon-lop-thong-ke');
-         if(chonLopTk) chonLopTk.innerHTML = html;
+         if(chonLopTk) chonLopTk.innerHTML = htmlTk;
+         
+         let htmlLop = '<option value="">-- Chọn lớp --</option>';
+         lops.forEach(l => htmlLop += `<option value="${l}">${l}</option>`);
          
          const chonLopLop = document.getElementById('chon-lop-lop');
-         if(chonLopLop) chonLopLop.innerHTML = html;
+         if(chonLopLop) chonLopLop.innerHTML = htmlLop;
       })
       .catch(e => console.error('Lỗi tải danh sách lớp:', e));
   }
@@ -746,7 +749,8 @@
                 maxDiem = diem;
                 const ho = hs['Họ'] || '';
                 const ten = hs['Tên'] || '';
-                nguoiCaoNhat = (ho + ' ' + ten).trim();
+                const tenLop = hs['Lớp'] ? ` (${hs['Lớp']})` : '';
+                nguoiCaoNhat = (ho + ' ' + ten).trim() + tenLop;
              }
 
              if (diem >= 8.0) mucLoai.Tot++;
