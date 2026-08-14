@@ -466,18 +466,18 @@
         // Hàm chuẩn hóa chuỗi để so sánh (xóa dấu cách, xuống dòng, viết thường)
         const norm = (s) => (s || '').toString().toLowerCase().replace(/[\s\n\r]/g, '');
         
-        // Tìm dòng chứa "stt" và "họvàtên"
+        // Tìm dòng chứa "stt" và "họvàtên" (hoặc "họ" + "tên")
         let headerRowIdx = -1;
         for (let i = 0; i < Math.min(20, rawData.length); i++) {
           const rowStr = rawData[i].map(norm).join('');
-          if (rowStr.includes('stt') && rowStr.includes('họvàtên')) {
+          if (rowStr.includes('stt') && (rowStr.includes('họvàtên') || (rowStr.includes('họ') && rowStr.includes('tên')))) {
             headerRowIdx = i;
             break;
           }
         }
 
         if (headerRowIdx === -1) {
-          throw new Error('Không tìm thấy dòng tiêu đề có cột "STT" và "Họ và tên". Vui lòng kiểm tra lại file Excel.');
+          throw new Error('Không tìm thấy dòng tiêu đề có cột "STT" và "Họ và tên" (hoặc "Họ", "Tên"). Vui lòng kiểm tra lại file Excel.');
         }
 
         // Quét 3 dòng kể từ headerRowIdx để gán vị trí cột (phòng trường hợp gộp ô)
@@ -491,6 +491,20 @@
         }
 
         targetCols.forEach(tc => {
+          if (tc === 'Họ và tên') {
+             let matchFull = searchSpace.find(s => s.n === 'họvàtên');
+             let matchHo = searchSpace.find(s => s.n.startsWith('họ'));
+             let matchTen = searchSpace.find(s => s.n === 'tên');
+
+             if (matchFull) {
+                colMapping['Họ và tên'] = matchFull.c;
+             } else if (matchHo && matchTen) {
+                colMapping['Họ'] = matchHo.c;
+                colMapping['Tên'] = matchTen.c;
+             }
+             return;
+          }
+
           const ntc = norm(tc);
           let match = searchSpace.find(s => s.n === ntc);
           
@@ -518,14 +532,29 @@
         const records = [];
         for (let i = dataStartIdx; i < rawData.length; i++) {
           const row = rawData[i];
+          
+          // Xử lý Họ và tên (1 cột hoặc 2 cột)
+          let hoTenVal = '';
+          if (colMapping['Họ và tên'] !== undefined) {
+             hoTenVal = row[colMapping['Họ và tên']] || '';
+          } else if (colMapping['Họ'] !== undefined && colMapping['Tên'] !== undefined) {
+             const ho = row[colMapping['Họ']] || '';
+             const ten = row[colMapping['Tên']] || '';
+             hoTenVal = (ho + ' ' + ten).trim();
+          }
+
           // Nếu dòng không có Tên thì bỏ qua (thường là dòng trống hoặc chữ ký)
-          if (colMapping['Họ và tên'] === undefined || !row[colMapping['Họ và tên']]) continue;
+          if (!hoTenVal) continue;
           
           const obj = {};
           targetCols.forEach(tc => {
-            let val = colMapping[tc] !== undefined ? row[colMapping[tc]] : '';
-            if (typeof val === 'string') val = val.trim();
-            obj[tc] = val;
+            if (tc === 'Họ và tên') {
+               obj[tc] = hoTenVal;
+            } else {
+               let val = colMapping[tc] !== undefined ? row[colMapping[tc]] : '';
+               if (typeof val === 'string') val = val.trim();
+               obj[tc] = val;
+            }
           });
           records.push(obj);
         }
