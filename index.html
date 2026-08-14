@@ -602,21 +602,35 @@
     HK1: 'Học kỳ 1', HK2: 'Học kỳ 2', CaNam: 'Cả năm'
   };
 
+  function xepLoaiDiem(diemStr) {
+    if (diemStr === undefined || diemStr === '') return '';
+    const d = parseFloat(diemStr.toString().replace(',', '.'));
+    if (isNaN(d)) return '';
+    if (d >= 8.0) return '<span style="color:#10b981; font-weight:bold">🟢 Tốt</span>';
+    if (d >= 6.5) return '<span style="color:#3b82f6; font-weight:bold">🔵 Khá</span>';
+    if (d >= 5.0) return '<span style="color:#f59e0b; font-weight:bold">🟡 Đạt</span>';
+    return '<span style="color:#ef4444; font-weight:bold">🔴 Chưa đạt</span>';
+  }
+
   function renderTraCuu(ketQuaArray) {
     let html = '';
     ketQuaArray.forEach(ketQua => {
       const tt = ketQua.thongTin;
       html += `<div class="the-ket-qua" style="margin-bottom: 20px;">
         <h3>${tt.hoTen}</h3>
-        <div class="ma">STT: ${tt.stt}</div>
+        <div class="ma">STT: ${tt.stt} ${tt.lop ? ' - Lớp: ' + tt.lop : ''}</div>
       </div>`;
 
       Object.keys(TEN_KY).forEach(ky => {
         const diem = ketQua.diem[ky];
         if (!diem) return;
+        
+        const cotDiem = (ky === 'CaNam') ? 'TB Cả năm' : 'ĐTB mhk';
+        const xl = xepLoaiDiem(diem[cotDiem]);
+
         html += `<div class="cuon-bang" style="margin-bottom:14px">
           <table class="bang-diem">
-            <tr><th colspan="2">${TEN_KY[ky]}</th></tr>
+            <tr><th colspan="2">${TEN_KY[ky]} ${xl ? ' | Xếp loại: ' + xl : ''}</th></tr>
             ${monHocRows(diem)}
           </table>
         </div>`;
@@ -666,7 +680,7 @@
     goiAPI('getDanhSachLop', { ky, lop })
       .then(ds => {
         document.getElementById('nut-xem-lop').disabled = false;
-        renderDanhSachLop(ds);
+        renderDanhSachLop(ds, ky);
       })
       .catch(loi => {
         document.getElementById('nut-xem-lop').disabled = false;
@@ -675,20 +689,22 @@
       });
   });
 
-  function renderDanhSachLop(ds) {
+  function renderDanhSachLop(ds, ky) {
     if (!ds.length) {
       document.getElementById('ket-qua-lop').innerHTML = '<p class="ghi-chu">Chưa có dữ liệu cho kỳ này.</p>';
       return;
     }
+    const cotDiem = (ky === 'CaNam') ? 'TB Cả năm' : 'ĐTB mhk';
     const cot = Object.keys(ds[0]);
-    let html = `<div class="cuon-bang"><table class="bang-diem"><tr>${cot.map(c => `<th>${c}</th>`).join('')}</tr>`;
+    let html = `<div class="cuon-bang"><table class="bang-diem"><tr>${cot.map(c => `<th>${c}</th>`).join('')}<th>Xếp loại</th></tr>`;
     ds.forEach(hs => {
+      const xl = xepLoaiDiem(hs[cotDiem]);
       html += `<tr>${cot.map(c => {
          const val = hs[c] || '';
          const boQuaToMau = ['STT', 'Lớp', 'Họ', 'Tên', 'Nhận xét', 'Ghi chú'];
          const valFmt = boQuaToMau.includes(c) ? val : formatDiem(val);
          return `<td>${valFmt}</td>`;
-      }).join('')}</tr>`;
+      }).join('')}<td>${xl}</td></tr>`;
     });
     html += '</table></div>';
     document.getElementById('ket-qua-lop').innerHTML = html;
