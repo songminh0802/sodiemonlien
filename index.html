@@ -1022,34 +1022,34 @@
           });
         }
 
-        // Xử lý đặc biệt cho Họ và Tên (do có thể gộp ô hoặc 2 cột rời)
-        let matchFull = searchSpace.find(s => s.n === 'họvàtên' || s.n.includes('họvàtên'));
-        let matchHo = searchSpace.find(s => s.n === 'họ' || s.n === 'họđệm' || s.n.startsWith('họ') || s.n.includes('họ'));
-        let matchTen = searchSpace.find(s => s.n === 'tên' || (s.n.includes('tên') && !s.n.includes('họ')));
+        // Tìm cột STT để làm mốc
+        let sttMatch = searchSpace.find(s => s.n === 'stt');
+        let sttCol = sttMatch ? sttMatch.c : 2; // Mặc định C (index 2)
+        
+        colMapping['STT'] = sttCol;
+        let hoCol = sttCol + 1; // Ngay sau STT là Họ (thường là cột D)
+        let tenCol = sttCol + 2; // Kế tiếp là Tên (thường là cột E)
 
-        // Fallback mặc định theo định dạng vnEdu/SMAS chuẩn: D (index 3) là Họ, E (index 4) là Tên
-        if (!matchFull) {
-           if (!matchHo) matchHo = { c: 3 }; 
-           if (!matchTen) matchTen = { c: 4 };
-        }
-
-        if (matchHo && matchTen && matchHo.c !== matchTen.c) {
-           colMapping['Họ'] = matchHo.c;
-           colMapping['Tên'] = matchTen.c;
-        } else if (matchFull) {
-           let rightCol = matchFull.c + 1;
-           let hasHeader = searchSpace.find(s => s.c === rightCol);
-           if (!hasHeader) { // Bị gộp ngang 2 cột
-              colMapping['Họ'] = matchFull.c;
-              colMapping['Tên'] = rightCol;
-           } else { // Thực sự chỉ có 1 cột Họ và tên
-              colMapping['Họ'] = matchFull.c;
-              colMapping['Tên'] = null; // Cờ đánh dấu để tự cắt chuỗi sau
+        // Kiểm tra thử 5 dòng dữ liệu đầu tiên xem cột Tên có dữ liệu không
+        // (Tránh trường hợp file chỉ có 1 cột Họ và tên gộp chung)
+        let hasDataInTenCol = false;
+        let testStartIdx = headerRowIdx + 1;
+        for (let r = testStartIdx; r < Math.min(testStartIdx + 10, rawData.length); r++) {
+           if (rawData[r][tenCol] !== undefined && rawData[r][tenCol].toString().trim() !== '') {
+               hasDataInTenCol = true;
+               break;
            }
         }
 
+        colMapping['Họ'] = hoCol;
+        if (hasDataInTenCol) {
+           colMapping['Tên'] = tenCol;
+        } else {
+           colMapping['Tên'] = null; // Cờ đánh dấu để tự tách Tên từ cột Họ
+        }
+
         targetCols.forEach(tc => {
-          if (tc === 'Họ' || tc === 'Tên') return; // Đã xử lý ở trên
+          if (tc === 'Họ' || tc === 'Tên' || tc === 'STT') return; // Đã xử lý ở trên
 
 
           const ntc = norm(tc);
