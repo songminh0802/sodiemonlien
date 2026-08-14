@@ -4,84 +4,117 @@
   <base target="_top">
   <meta charset="UTF-8">
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    
     :root {
-      --muc: #1c2b3a;
-      --muc-nhat: #33475c;
-      --giay: #f6f3ec;
-      --giay-toi: #ece7db;
-      --dong: #b8863b;
-      --do: #b3413e;
-      --xanh: #3a7d5c;
-      --vien: #dcd5c4;
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --primary-light: #e0e7ff;
+      --bg-body: #f8fafc;
+      --bg-card: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --border-focus: #c7d2fe;
+      --danger: #ef4444;
+      --danger-bg: #fef2f2;
+      --warning: #f59e0b;
+      --success: #10b981;
+      --success-bg: #ecfdf5;
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
     }
 
     * { box-sizing: border-box; }
 
     body {
       margin: 0;
-      background: var(--giay);
-      color: var(--muc);
-      font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg-body);
+      color: var(--text-main);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       -webkit-font-smoothing: antialiased;
+      line-height: 1.5;
     }
 
     header.trang {
-      background: var(--muc);
-      color: var(--giay);
-      padding: 22px 20px 18px;
-      border-bottom: 3px double var(--dong);
+      background: var(--primary);
+      color: #ffffff;
+      padding: 30px 20px;
+      text-align: center;
+      box-shadow: var(--shadow-md);
+      position: relative;
+      z-index: 10;
     }
 
     header.trang h1 {
       margin: 0;
-      font-family: Georgia, "Times New Roman", serif;
-      font-weight: 600;
-      font-size: 1.5rem;
-      letter-spacing: 0.02em;
+      font-weight: 700;
+      font-size: 1.75rem;
+      letter-spacing: -0.02em;
     }
 
     header.trang p {
-      margin: 4px 0 0;
-      font-size: 0.85rem;
-      opacity: 0.75;
+      margin: 8px 0 0;
+      font-size: 0.95rem;
+      opacity: 0.9;
+      font-weight: 400;
     }
 
     nav.tab {
       display: flex;
-      gap: 2px;
-      background: var(--giay-toi);
-      padding: 6px 6px 0;
+      justify-content: center;
+      gap: 10px;
+      padding: 20px 16px 0;
       overflow-x: auto;
+      max-width: 800px;
+      margin: 0 auto;
+      scrollbar-width: none;
     }
+    
+    nav.tab::-webkit-scrollbar { display: none; }
 
     nav.tab button {
-      flex: 1;
-      min-width: 120px;
+      flex: 0 0 auto;
       border: none;
-      background: transparent;
-      color: var(--muc-nhat);
-      padding: 12px 10px;
-      font-size: 0.9rem;
+      background: var(--bg-card);
+      color: var(--text-muted);
+      padding: 12px 20px;
+      font-size: 0.95rem;
       font-weight: 600;
       cursor: pointer;
-      border-radius: 8px 8px 0 0;
+      border-radius: 12px 12px 0 0;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.2s ease;
       border-bottom: 3px solid transparent;
     }
 
+    nav.tab button:hover {
+      color: var(--primary);
+      background: var(--primary-light);
+    }
+
     nav.tab button.dang-chon {
-      background: var(--giay);
-      color: var(--muc);
-      border-bottom: 3px solid var(--dong);
+      color: var(--primary);
+      background: var(--bg-card);
+      border-bottom: 3px solid var(--primary);
+      box-shadow: 0 -4px 6px -1px rgb(0 0 0 / 0.1);
     }
 
     main {
-      max-width: 760px;
+      max-width: 800px;
       margin: 0 auto;
       padding: 20px 16px 60px;
     }
 
     .khung {
       display: none;
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     .khung.dang-chon {
@@ -89,109 +122,263 @@
     }
 
     .the {
-      background: #fff;
-      border: 1px solid var(--vien);
-      border-radius: 10px;
-      padding: 18px;
-      margin-bottom: 16px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow 0.3s ease;
+    }
+    
+    .the:hover {
+      box-shadow: var(--shadow-md);
     }
 
     .hang-nhap {
       display: flex;
-      gap: 8px;
+      gap: 12px;
       flex-wrap: wrap;
-      margin-bottom: 6px;
+      margin-bottom: 12px;
     }
 
-    input[type="text"], input[type="password"], select {
+    input[type="text"], input[type="password"], input[type="file"], select {
       flex: 1;
       min-width: 160px;
-      padding: 10px 12px;
-      border: 1px solid var(--vien);
-      border-radius: 6px;
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
       font-size: 0.95rem;
-      background: var(--giay);
-      color: var(--muc);
+      background: var(--bg-body);
+      color: var(--text-main);
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--border-focus);
+      background: var(--bg-card);
     }
 
     button.nut {
-      background: var(--muc);
-      color: var(--giay);
+      background: var(--primary);
+      color: #ffffff;
       border: none;
-      padding: 10px 18px;
-      border-radius: 6px;
+      padding: 12px 24px;
+      border-radius: 10px;
       font-weight: 600;
       cursor: pointer;
-      font-size: 0.9rem;
+      font-size: 0.95rem;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
     }
 
-    button.nut:hover { background: var(--muc-nhat); }
-    button.nut:disabled { opacity: 0.5; cursor: not-allowed; }
+    button.nut:hover { 
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+    
+    button.nut:active {
+      transform: translateY(0);
+    }
+    
+    button.nut:disabled { 
+      opacity: 0.6; 
+      cursor: not-allowed; 
+      transform: none;
+      box-shadow: none;
+    }
 
     button.nut.vien {
       background: transparent;
-      color: var(--muc);
-      border: 1px solid var(--muc);
+      color: var(--primary);
+      border: 2px solid var(--primary);
+    }
+    
+    button.nut.vien:hover {
+      background: var(--primary-light);
     }
 
     .ghi-chu {
-      font-size: 0.8rem;
-      color: var(--muc-nhat);
-      opacity: 0.8;
-      margin: 4px 0 0;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin: 4px 0 16px;
+      line-height: 1.6;
     }
 
     .thong-bao {
-      padding: 10px 12px;
-      border-radius: 6px;
-      font-size: 0.88rem;
-      margin-top: 10px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      margin-top: 16px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      animation: fadeIn 0.3s;
     }
 
-    .thong-bao.loi { background: #fbeaea; color: var(--do); border: 1px solid #e3b8b6; }
-    .thong-bao.tot { background: #e9f3ee; color: var(--xanh); border: 1px solid #bcdccb; }
+    .thong-bao.loi { background: var(--danger-bg); color: var(--danger); border: 1px solid #fecaca; }
+    .thong-bao.tot { background: var(--success-bg); color: var(--success); border: 1px solid #a7f3d0; }
 
     table.bang-diem {
       width: 100%;
-      border-collapse: collapse;
-      font-size: 0.85rem;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 0.9rem;
       margin-top: 10px;
     }
 
     table.bang-diem th, table.bang-diem td {
-      border-bottom: 1px solid var(--vien);
-      padding: 7px 8px;
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
       text-align: left;
       white-space: nowrap;
     }
 
     table.bang-diem th {
-      background: var(--giay-toi);
+      background: var(--bg-body);
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-size: 0.8rem;
+      letter-spacing: 0.05em;
       position: sticky;
       top: 0;
+      z-index: 2;
+    }
+    
+    table.bang-diem tr:hover td {
+      background: var(--bg-body);
     }
 
-    .cuon-bang { overflow-x: auto; border: 1px solid var(--vien); border-radius: 8px; }
+    .cuon-bang { 
+      overflow-x: auto; 
+      border: 1px solid var(--border); 
+      border-radius: 12px; 
+      background: var(--bg-card);
+    }
 
-    .the-ket-qua { border-left: 4px solid var(--dong); padding-left: 14px; margin-top: 10px; }
-    .the-ket-qua h3 { margin: 0 0 2px; font-family: Georgia, serif; }
-    .the-ket-qua .ma { color: var(--muc-nhat); font-size: 0.85rem; margin-bottom: 10px; }
+    .the-ket-qua { 
+      border-left: 4px solid var(--primary); 
+      padding-left: 16px; 
+      margin-top: 16px; 
+    }
+    
+    .the-ket-qua h3 { 
+      margin: 0 0 4px; 
+      font-weight: 700;
+      color: var(--text-main);
+      font-size: 1.25rem;
+    }
+    
+    .the-ket-qua .ma { 
+      color: var(--text-muted); 
+      font-size: 0.9rem; 
+      margin-bottom: 16px; 
+    }
 
-    .khoa-quan-tri { text-align: center; padding: 30px 10px; }
-    .khoa-quan-tri .icon { font-size: 2rem; margin-bottom: 8px; }
+    .khoa-quan-tri { text-align: center; padding: 40px 20px; }
+    .khoa-quan-tri .icon { font-size: 3rem; margin-bottom: 16px; opacity: 0.8; }
+    .khoa-quan-tri h3 { margin: 0 0 8px; font-size: 1.25rem; }
 
-    .diem-kem { color: #d32f2f; font-weight: bold; } /* Điểm < 3.5 */
-    .diem-yeu { color: #f57c00; font-weight: bold; } /* Điểm >= 3.5 và < 5.0 */
+    .diem-kem { color: var(--danger); font-weight: 700; }
+    .diem-yeu { color: var(--warning); font-weight: 700; }
 
     .an { display: none !important; }
 
     /* DASHBOARD CSS */
-    .luoi-thong-ke { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px; }
-    .the-so { background: #fff; padding: 20px; border-radius: 10px; border: 1px solid var(--vien); text-align: center; }
-    .the-so .tieu-de { font-size: 0.85rem; color: var(--muc-nhat); margin-bottom: 8px; font-weight: 600; text-transform: uppercase; }
-    .the-so .gia-tri { font-size: 2rem; color: var(--dong); font-weight: bold; }
-    .the-so .phu { font-size: 0.85rem; margin-top: 5px; color: var(--xanh); }
-    .bieu-do-container { width: 100%; max-width: 400px; margin: 0 auto; }
+    .luoi-thong-ke { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+      gap: 16px; 
+      margin-bottom: 24px; 
+    }
+    
+    .the-so { 
+      background: var(--bg-card); 
+      padding: 24px; 
+      border-radius: 16px; 
+      border: 1px solid var(--border); 
+      text-align: center;
+      box-shadow: var(--shadow-sm);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .the-so:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+    
+    .the-so .tieu-de { 
+      font-size: 0.85rem; 
+      color: var(--text-muted); 
+      margin-bottom: 8px; 
+      font-weight: 600; 
+      text-transform: uppercase; 
+      letter-spacing: 0.05em;
+    }
+    
+    .the-so .gia-tri { 
+      font-size: 2.5rem; 
+      color: var(--primary); 
+      font-weight: 700; 
+      line-height: 1.2;
+    }
+    
+    .the-so .phu { 
+      font-size: 0.9rem; 
+      margin-top: 8px; 
+      color: var(--success); 
+      font-weight: 500;
+    }
+    
+    .bieu-do-container { 
+      width: 100%; 
+      max-width: 400px; 
+      margin: 0 auto; 
+      padding: 20px;
+    }
+
+    /* ĐIỀU HƯỚNG DI ĐỘNG (BOTTOM NAVIGATION) */
+    @media (max-width: 640px) {
+      nav.tab {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 50;
+        background: var(--bg-card);
+        padding: 8px 8px 20px;
+        box-shadow: 0 -4px 15px rgb(0 0 0 / 0.08);
+        border-radius: 24px 24px 0 0;
+        gap: 4px;
+      }
+      
+      nav.tab button {
+        border-radius: 12px;
+        font-size: 0.8rem;
+        padding: 12px 4px;
+        box-shadow: none;
+        border: none;
+      }
+      
+      nav.tab button.dang-chon {
+        background: var(--primary-light);
+        border: none;
+        box-shadow: none;
+      }
+      
+      main {
+        padding-bottom: 100px;
+      }
+    }
   </style>
 </head>
 <body>
