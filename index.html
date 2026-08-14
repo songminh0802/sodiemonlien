@@ -1174,16 +1174,21 @@
         if (tenMatch) tenCol = tenMatch.c;
 
         // Kiểm tra xem cột bên phải có thực sự là cột Tên không
-        let rightHeader = searchSpace.find(s => s.c === tenCol);
+        let isTenColValid = true;
+        // Chỉ check 2 dòng tiêu đề (dòng hiện tại và dòng ngay bên dưới)
+        for (let r = headerRowIdx; r <= headerRowIdx + 1 && r < rawData.length; r++) {
+            if (!rawData[r]) continue;
+            let title = norm(rawData[r][tenCol]);
+            if (title.includes('ngày') || title.includes('sinh') || title.includes('mã') || title.includes('hs') || title.includes('giới') || title.includes('nữ')) {
+                isTenColValid = false;
+            }
+        }
+
         let hasDataInTenCol = false;
-        
-        // Nếu cột bên phải có tiêu đề rác (ví dụ "Ngày sinh", "Mã HS") thì đó KHÔNG phải cột Tên
-        if (rightHeader && !rightHeader.n.includes('tên') && !rightHeader.n.includes('họ')) {
-             hasDataInTenCol = false; 
-        } else {
-             // Kiểm tra thử 10 dòng dữ liệu đầu tiên xem cột Tên có dữ liệu thật không
+        if (isTenColValid) {
+             // Kiểm tra thử 15 dòng dữ liệu đầu tiên xem cột Tên có dữ liệu thật không
              let testStartIdx = headerRowIdx + 1;
-             for (let r = testStartIdx; r < Math.min(testStartIdx + 10, rawData.length); r++) {
+             for (let r = testStartIdx; r < Math.min(testStartIdx + 15, rawData.length); r++) {
                  if (rawData[r] && rawData[r][tenCol] !== undefined && rawData[r][tenCol].toString().trim() !== '') {
                      hasDataInTenCol = true;
                      break;
