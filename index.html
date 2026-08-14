@@ -439,6 +439,7 @@
                <!-- Bảng thống kê sẽ hiện ở đây -->
              </div>
            </div>
+           <div id="bang-chi-tiet-lop-container" style="margin-top: 30px; width: 100%;"></div>
         </div>
       </div>
     </section>
@@ -712,7 +713,7 @@
     goiAPI('getDanhSachLop', { ky, lop })
       .then(ds => {
         document.getElementById('nut-xem-thong-ke').disabled = false;
-        renderThongKe(ds, ky);
+        renderThongKe(ds, ky, lop);
       })
       .catch(loi => {
         document.getElementById('nut-xem-thong-ke').disabled = false;
@@ -720,7 +721,7 @@
       });
   });
 
-  function renderThongKe(ds, ky) {
+  function renderThongKe(ds, ky, lop) {
     if (!ds.length) {
       hienThongBao('thong-bao-thong-ke', 'Chưa có dữ liệu cho kỳ này.', 'loi');
       return;
@@ -807,6 +808,66 @@
       </div>
     `;
     document.getElementById('bang-thong-ke-container').innerHTML = htmlBang;
+
+    // Tạo bảng chi tiết theo từng lớp nếu lop === 'ALL'
+    const bangChiTiet = document.getElementById('bang-chi-tiet-lop-container');
+    if (lop === 'ALL') {
+      const classMap = {};
+      ds.forEach(hs => {
+        const cLop = hs['Lớp'] || 'Không rõ';
+        if (!classMap[cLop]) classMap[cLop] = { siSo: 0, tongDiem: 0, countHopLe: 0, Tot: 0, Kha: 0, Dat: 0, ChuaDat: 0 };
+        classMap[cLop].siSo++;
+        
+        const diemStr = hs[cotDiem];
+        if (diemStr !== undefined && diemStr !== '') {
+          const diem = parseFloat(diemStr.toString().replace(',', '.'));
+          if (!isNaN(diem)) {
+            classMap[cLop].tongDiem += diem;
+            classMap[cLop].countHopLe++;
+            if (diem >= 8.0) classMap[cLop].Tot++;
+            else if (diem >= 6.5) classMap[cLop].Kha++;
+            else if (diem >= 5.0) classMap[cLop].Dat++;
+            else classMap[cLop].ChuaDat++;
+          }
+        }
+      });
+      
+      let htmlChiTiet = `
+        <h3 style="margin-bottom: 12px; font-size: 1.1rem; color: var(--text-main); font-weight: 700">Chi tiết thống kê từng lớp</h3>
+        <div class="cuon-bang">
+          <table class="bang-diem">
+            <tr>
+              <th>Lớp</th>
+              <th style="text-align: right">Sĩ số</th>
+              <th style="text-align: right">ĐTB Lớp</th>
+              <th style="text-align: right">Tốt</th>
+              <th style="text-align: right">Khá</th>
+              <th style="text-align: right">Đạt</th>
+              <th style="text-align: right">Chưa đạt</th>
+            </tr>
+      `;
+      
+      Object.keys(classMap).sort().forEach(cLop => {
+        const stats = classMap[cLop];
+        const dtb = stats.countHopLe > 0 ? (stats.tongDiem / stats.countHopLe).toFixed(1).replace('.', ',') : '-';
+        const percent = (v) => stats.siSo > 0 ? ' <span style="font-size:0.8rem; color:var(--text-muted)">(' + ((v / stats.siSo) * 100).toFixed(0) + '%)</span>' : '';
+        htmlChiTiet += `
+            <tr>
+              <td style="font-weight: 600; color: var(--text-main)">${cLop}</td>
+              <td style="text-align: right">${stats.siSo}</td>
+              <td style="text-align: right; color: var(--primary); font-weight: bold">${dtb}</td>
+              <td style="text-align: right">${stats.Tot}${percent(stats.Tot)}</td>
+              <td style="text-align: right">${stats.Kha}${percent(stats.Kha)}</td>
+              <td style="text-align: right">${stats.Dat}${percent(stats.Dat)}</td>
+              <td style="text-align: right">${stats.ChuaDat}${percent(stats.ChuaDat)}</td>
+            </tr>
+        `;
+      });
+      htmlChiTiet += \`</table></div>\`;
+      bangChiTiet.innerHTML = htmlChiTiet;
+    } else {
+      bangChiTiet.innerHTML = '';
+    }
 
     veBieuDo(mucLoai);
   }
