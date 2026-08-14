@@ -399,7 +399,6 @@
 
   <nav class="tab">
     <button class="tab-nut dang-chon" data-tab="thong-ke">Thống kê</button>
-    <button class="tab-nut" data-tab="ca-nhan">Tra cứu cá nhân</button>
     <button class="tab-nut" data-tab="lop">Xem theo lớp</button>
     <button class="tab-nut" data-tab="quan-tri">Quản trị</button>
   </nav>
@@ -467,20 +466,6 @@
            
            <div id="bang-chi-tiet-lop-container" style="margin-top: 30px; width: 100%;"></div>
         </div>
-      </div>
-    </section>
-
-    <!-- TAB 1: TRA CỨU CÁ NHÂN -->
-    <section id="khung-ca-nhan" class="khung">
-      <div class="the">
-        <div class="hang-nhap" style="justify-content: center; flex-wrap: wrap;">
-          <input type="text" id="o-ma-hs" placeholder="Nhập chính xác Họ và tên..." style="flex: 1; min-width: 200px;">
-          <input type="text" id="o-ngay-sinh" placeholder="Ngày sinh (vd: 15/08/2011)" style="flex: 1; min-width: 200px;">
-          <button class="nut" id="nut-tra-cuu">Tra cứu</button>
-        </div>
-        <p class="ghi-chu">Để bảo mật thông tin, vui lòng nhập chính xác <b>Họ và tên</b> cùng <b>Ngày sinh</b> của học sinh.</p>
-        <div id="thong-bao-ca-nhan"></div>
-        <div id="ket-qua-ca-nhan"></div>
       </div>
     </section>
 
@@ -602,34 +587,6 @@
 
   // ====== TAB 1: TRA CỨU CÁ NHÂN ======
   document.getElementById('nut-tra-cuu').addEventListener('click', traCuuCaNhan);
-  document.getElementById('o-ma-hs').addEventListener('keydown', e => {
-    if (e.key === 'Enter') traCuuCaNhan();
-  });
-
-  function traCuuCaNhan() {
-    const hoTen = document.getElementById('o-ma-hs').value.trim();
-    const ngaySinh = document.getElementById('o-ngay-sinh').value.trim();
-    
-    if (!hoTen || !ngaySinh) {
-        hienThongBao('thong-bao-ca-nhan', 'Vui lòng điền đủ Họ Tên và Ngày sinh.', 'loi');
-        return;
-    }
-
-    hienThongBao('thong-bao-ca-nhan', '', '');
-    document.getElementById('ket-qua-ca-nhan').innerHTML = 'Đang tra cứu...';
-    document.getElementById('nut-tra-cuu').disabled = true;
-
-    goiAPI('getTraCuuCaNhan', { hoTen, ngaySinh })
-      .then(ketQuaArray => {
-        document.getElementById('nut-tra-cuu').disabled = false;
-        renderTraCuu(ketQuaArray);
-      })
-      .catch(loi => {
-        document.getElementById('nut-tra-cuu').disabled = false;
-        document.getElementById('ket-qua-ca-nhan').innerHTML = '';
-        hienThongBao('thong-bao-ca-nhan', loi.message, 'loi');
-      });
-  }
 
   const TEN_KY = {
     HK1: 'Học kỳ 1', HK2: 'Học kỳ 2', CaNam: 'Cả năm'
@@ -690,117 +647,6 @@
     return '<span style="color:#ef4444; font-weight:bold">🔴 Chưa đạt</span>';
   }
 
-  function renderTraCuu(ketQuaArray) {
-    let html = '';
-    ketQuaArray.forEach((ketQua, index) => {
-      const tt = ketQua.thongTin;
-      const chartId = `radar-chart-${index}`;
-      
-      html += `<div class="the-ket-qua" style="margin-bottom: 30px;">
-        <h3 style="margin-bottom: 8px; color: var(--primary); display: flex; align-items: center; gap: 8px;">🎓 ${tt.hoTen}</h3>
-        <div class="ma" style="margin-bottom: 20px;">
-           <span style="background: #e0e7ff; color: #4338ca; padding: 4px 8px; border-radius: 4px; font-weight: 500; font-size: 0.9rem;">Lớp: ${tt.lop || 'Chưa xếp'}</span>
-           <span style="background: #f3f4f6; padding: 4px 8px; border-radius: 4px; font-size: 0.9rem; margin-left: 8px;">Ngày sinh: ${tt.ngaySinh || '---'}</span>
-        </div>
-        
-        <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start;">
-           <div style="flex: 2; min-width: 300px;">
-      `;
-
-      // Cấu trúc dữ liệu để vẽ biểu đồ Mạng nhện
-      const radarLabels = [];
-      const radarDiemCaNhan = [];
-      const radarDiemLop = [];
-
-      Object.keys(TEN_KY).forEach(ky => {
-        const diem = ketQua.diem[ky];
-        if (!diem) return;
-        
-        autoCalculateTT22(diem, ky); // Tự động tính toán lại
-        const classAvg = ketQua.classAvg ? ketQua.classAvg[ky] : null;
-        
-        const cotDiem = (ky === 'CaNam') ? 'TB Cả năm' : 'ĐTB mhk';
-        const xl = xepLoaiDiem(diem[cotDiem]);
-
-        // Push data to Radar
-        const d_cn = parseFloat(String(diem[cotDiem] || '').replace(',', '.'));
-        const d_lop = classAvg ? parseFloat(String(classAvg[cotDiem] || '').replace(',', '.')) : NaN;
-        if (!isNaN(d_cn)) {
-            radarLabels.push(TEN_KY[ky]);
-            radarDiemCaNhan.push(d_cn);
-            radarDiemLop.push(isNaN(d_lop) ? d_cn : d_lop); // nếu k có điểm lớp thì cho bằng điểm cá nhân để khỏi lỗi
-        }
-
-        html += `<div class="cuon-bang" style="margin-bottom:14px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden;">
-          <table class="bang-diem" style="margin: 0;">
-            <tr><th colspan="2" style="background: #f8fafc; color: var(--text-main);">${TEN_KY[ky]} ${xl ? ' | Xếp loại: ' + xl : ''}</th></tr>
-            ${monHocRows(diem)}
-          </table>
-        </div>`;
-      });
-      
-      html += `</div>
-           <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 20px; background: #fff; border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow-sm);">
-              <h4 style="margin-top: 0; margin-bottom: 15px; color: var(--text-main);">Biểu đồ Năng lực</h4>
-              <canvas id="${chartId}" style="max-width: 100%;"></canvas>
-              <p style="margin-top: 15px; font-size: 0.85rem; color: var(--text-muted); text-align: center;">So sánh điểm trung bình của học sinh với điểm trung bình toàn lớp.</p>
-           </div>
-        </div>
-      </div>`;
-      
-      // Delay vẽ biểu đồ vì phần tử canvas chưa được render ra DOM
-      setTimeout(() => {
-          const ctx = document.getElementById(chartId);
-          if (ctx && radarLabels.length > 0) {
-              new Chart(ctx.getContext('2d'), {
-                  type: 'radar',
-                  data: {
-                      labels: radarLabels,
-                      datasets: [
-                          {
-                              label: 'Điểm cá nhân',
-                              data: radarDiemCaNhan,
-                              backgroundColor: 'rgba(79, 70, 229, 0.2)',
-                              borderColor: 'rgba(79, 70, 229, 1)',
-                              pointBackgroundColor: 'rgba(79, 70, 229, 1)',
-                              pointBorderColor: '#fff',
-                              pointHoverBackgroundColor: '#fff',
-                              pointHoverBorderColor: 'rgba(79, 70, 229, 1)'
-                          },
-                          {
-                              label: 'ĐTB Lớp',
-                              data: radarDiemLop,
-                              backgroundColor: 'rgba(156, 163, 175, 0.2)',
-                              borderColor: 'rgba(156, 163, 175, 1)',
-                              pointBackgroundColor: 'rgba(156, 163, 175, 1)',
-                              pointBorderColor: '#fff',
-                              pointHoverBackgroundColor: '#fff',
-                              pointHoverBorderColor: 'rgba(156, 163, 175, 1)',
-                              borderDash: [5, 5]
-                          }
-                      ]
-                  },
-                  options: {
-                      responsive: true,
-                      scales: {
-                          r: {
-                              angleLines: { display: true },
-                              suggestedMin: 0,
-                              suggestedMax: 10
-                          }
-                      },
-                      plugins: {
-                          legend: { position: 'bottom' }
-                      }
-                  }
-              });
-          }
-      }, 50);
-
-    });
-
-    document.getElementById('ket-qua-ca-nhan').innerHTML = html;
-  }
 
   function formatDiem(val) {
     if (val === '' || val === null || val === undefined) return '';
@@ -813,17 +659,6 @@
     return val;
   }
 
-  function monHocRows(diem) {
-    const boQua = ['STT', 'Lớp', 'Họ', 'Tên'];
-    return Object.keys(diem)
-      .filter(k => !boQua.includes(k) && diem[k] !== '')
-      .map(k => {
-         const val = diem[k];
-         const valFmt = ['Nhận xét', 'Ghi chú'].includes(k) ? val : formatDiem(val);
-         return `<tr><td style="font-weight: 500">${k}</td><td>${valFmt}</td></tr>`;
-      })
-      .join('');
-  }
 
   // ====== TAB 2: XEM THEO LỚP / KỲ ======
   document.getElementById('nut-xem-lop').addEventListener('click', () => {
