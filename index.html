@@ -449,11 +449,90 @@
       try {
         const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
         const ws = wb.Sheets[wb.SheetNames[0]];
-        const records = XLSX.utils.sheet_to_json(ws, { defval: '' });
+        
+        // Đọc raw data để tự tìm cột (do file của trường có nhiều dòng tiêu đề và gộp ô)
+        const rawData = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        
+        // Danh sách cột chuẩn mực cần có cho mỗi kỳ (để gửi lên server)
+        const COLS_K1 = ['STT', 'Họ và tên', 'TX1', 'TX2', 'TX3', 'TX4', 'ĐĐGgk', 'ĐĐGck', 'ĐTB mhk', 'Nhận xét'];
+        const COLS_K2 = ['STT', 'Họ và tên', 'TX1', 'TX2', 'TX3', 'TX4', 'ĐĐGgk', 'ĐĐGck', 'ĐTB mhk', 'Nhận xét', 'HKI', 'HKII', 'CN'];
+        const COLS_CA = ['STT', 'Họ và tên', 'TBHK 1', 'TBHK 2', 'TB Cả năm', 'Điểm thi lại', 'Ghi chú'];
+        
+        let targetCols = [];
+        if (ky === 'HK1') targetCols = COLS_K1;
+        else if (ky === 'HK2') targetCols = COLS_K2;
+        else if (ky === 'CaNam') targetCols = COLS_CA;
+
+        // Hàm chuẩn hóa chuỗi để so sánh (xóa dấu cách, xuống dòng, viết thường)
+        const norm = (s) => (s || '').toString().toLowerCase().replace(/[\s\n\r]/g, '');
+        
+        // Tìm dòng chứa "stt" và "họvàtên"
+        let headerRowIdx = -1;
+        for (let i = 0; i < Math.min(20, rawData.length); i++) {
+          const rowStr = rawData[i].map(norm).join('');
+          if (rowStr.includes('stt') && rowStr.includes('họvàtên')) {
+            headerRowIdx = i;
+            break;
+          }
+        }
+
+        if (headerRowIdx === -1) {
+          throw new Error('Không tìm thấy dòng tiêu đề có cột "STT" và "Họ và tên". Vui lòng kiểm tra lại file Excel.');
+        }
+
+        // Quét 3 dòng kể từ headerRowIdx để gán vị trí cột (phòng trường hợp gộp ô)
+        const colMapping = {}; // { 'TX1': 2, 'TX2': 3 ... }
+        const searchSpace = [];
+        for (let r = headerRowIdx; r <= headerRowIdx + 2 && r < rawData.length; r++) {
+          rawData[r].forEach((val, c) => {
+            const n = norm(val);
+            if (n) searchSpace.push({ n, c });
+          });
+        }
+
+        targetCols.forEach(tc => {
+          const ntc = norm(tc);
+          let match = searchSpace.find(s => s.n === ntc);
+          
+          if (!match) {
+             // Các trường hợp ngoại lệ từ file PDF
+             if (ntc === 'đđggk') match = searchSpace.find(s => s.n.includes('ggk'));
+             else if (ntc === 'đđgck') match = searchSpace.find(s => s.n.includes('gck'));
+             else if (ntc === 'đtbmhk') match = searchSpace.find(s => s.n.includes('mhk') || s.n.includes('đtb'));
+             else if (ntc === 'tbcảnăm') match = searchSpace.find(s => s.n.includes('cảnăm') || s.n.includes('canam'));
+             else if (ntc === 'điểmthilại') match = searchSpace.find(s => s.n.includes('thilại'));
+          }
+          
+          if (match) colMapping[tc] = match.c;
+        });
+
+        // Tìm dòng dữ liệu đầu tiên (dòng có STT là số)
+        let dataStartIdx = headerRowIdx + 1;
+        for (let r = headerRowIdx + 1; r < rawData.length; r++) {
+           if (colMapping['STT'] !== undefined && rawData[r][colMapping['STT']] !== '' && !isNaN(parseInt(rawData[r][colMapping['STT']]))) {
+               dataStartIdx = r;
+               break;
+           }
+        }
+
+        const records = [];
+        for (let i = dataStartIdx; i < rawData.length; i++) {
+          const row = rawData[i];
+          // Nếu dòng không có Tên thì bỏ qua (thường là dòng trống hoặc chữ ký)
+          if (colMapping['Họ và tên'] === undefined || !row[colMapping['Họ và tên']]) continue;
+          
+          const obj = {};
+          targetCols.forEach(tc => {
+            let val = colMapping[tc] !== undefined ? row[colMapping[tc]] : '';
+            if (typeof val === 'string') val = val.trim();
+            obj[tc] = val;
+          });
+          records.push(obj);
+        }
 
         if (!records.length) {
           document.getElementById('nut-nhap-excel').disabled = false;
-          hienThongBao('thong-bao-import', 'File không có dữ liệu.', 'loi');
+          hienThongBao('thong-bao-import', 'File không có dữ liệu hợp lệ.', 'loi');
           return;
         }
 
