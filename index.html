@@ -747,6 +747,33 @@
     const cotDiem = (ky === 'CaNam') ? 'TB Cả năm' : 'ĐTB mhk';
     const cot = Object.keys(ds[0]);
     
+    // Tự động phát hiện và cảnh báo học sinh thiếu điểm TX
+    let warningHtml = '';
+    const allTXCols = ['TX1', 'TX2', 'TX3', 'TX4'];
+    // Chỉ cảnh báo cột TX nào mà ĐÃ CÓ ít nhất 1 học sinh được nhập điểm (tức là cột đó đang được sử dụng)
+    const activeTXCols = allTXCols.filter(tx => ds.some(hs => hs[tx] !== undefined && hs[tx].toString().trim() !== ''));
+    
+    if (activeTXCols.length > 0) {
+        const dsThieu = [];
+        ds.forEach(hs => {
+            const missed = activeTXCols.filter(tx => hs[tx] === undefined || hs[tx].toString().trim() === '');
+            if (missed.length > 0) {
+                dsThieu.push(`<strong>${hs['Họ']} ${hs['Tên']}</strong> <span style="font-size:0.85em; color:#6b7280">(Thiếu: <span style="color:var(--danger); font-weight:600">${missed.join(', ')}</span>)</span>`);
+            }
+        });
+        
+        if (dsThieu.length > 0) {
+            warningHtml = `<div style="background: #fff3cd; color: #856404; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid #ffc107; box-shadow: 0 2px 4px rgba(0,0,0,0.05); font-size: 0.95rem;">
+              <h4 style="margin-top: 0; margin-bottom: 8px; font-size: 1.05rem; display: flex; align-items: center; gap: 6px;">
+                 ⚠️ Cảnh báo: Có ${dsThieu.length} học sinh bị thiếu điểm Thường xuyên (TX1 - TX4)
+              </h4>
+              <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;">
+                 ${dsThieu.map(txt => `<div style="background: white; border: 1px solid #ffeeba; padding: 4px 10px; border-radius: 20px;">${txt}</div>`).join('')}
+              </div>
+            </div>`;
+        }
+    }
+    
     // Đặt cột Xếp loại trước Nhận xét hoặc Ghi chú
     const columnsToRender = [];
     cot.forEach(c => {
@@ -819,7 +846,7 @@
     });
     statsHtml += `</table></div></div>`;
 
-    document.getElementById('ket-qua-lop').innerHTML = html + statsHtml;
+    document.getElementById('ket-qua-lop').innerHTML = warningHtml + html + statsHtml;
   }
 
   // ====== TAB: THỐNG KÊ (DASHBOARD) ======
