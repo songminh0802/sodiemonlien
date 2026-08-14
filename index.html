@@ -1022,20 +1022,22 @@
           });
         }
 
-        // Tìm cột STT để làm mốc
+        // Tìm cột STT để làm mốc (có thể là A hoặc C tùy file xuất ra, nhưng không lấy cột B)
         let sttMatch = searchSpace.find(s => s.n === 'stt');
-        let sttCol = sttMatch ? sttMatch.c : 2; // Mặc định C (index 2)
+        colMapping['STT'] = sttMatch ? sttMatch.c : 2; // Mặc định C (index 2)
         
-        colMapping['STT'] = sttCol;
-        let hoCol = sttCol + 1; // Ngay sau STT là Họ (thường là cột D)
-        let tenCol = sttCol + 2; // Kế tiếp là Tên (thường là cột E)
+        // --- ÉP CỨNG VỊ TRÍ CỘT HỌ VÀ TÊN ---
+        // Người dùng yêu cầu chuẩn xác: Cột D (index 3) là Họ, Cột E (index 4) là Tên. 
+        // Bỏ qua cột B (Mã HS).
+        let hoCol = 3;
+        let tenCol = 4;
 
-        // Kiểm tra thử 5 dòng dữ liệu đầu tiên xem cột Tên có dữ liệu không
-        // (Tránh trường hợp file chỉ có 1 cột Họ và tên gộp chung)
+        // Kiểm tra thử 10 dòng dữ liệu đầu tiên xem cột Tên (E) có dữ liệu không
+        // (Tránh trường hợp import nhầm file chỉ có 1 cột Họ và tên gộp chung)
         let hasDataInTenCol = false;
         let testStartIdx = headerRowIdx + 1;
         for (let r = testStartIdx; r < Math.min(testStartIdx + 10, rawData.length); r++) {
-           if (rawData[r][tenCol] !== undefined && rawData[r][tenCol].toString().trim() !== '') {
+           if (rawData[r] && rawData[r][tenCol] !== undefined && rawData[r][tenCol].toString().trim() !== '') {
                hasDataInTenCol = true;
                break;
            }
