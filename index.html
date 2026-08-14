@@ -1023,9 +1023,15 @@
         }
 
         // Xử lý đặc biệt cho Họ và Tên (do có thể gộp ô hoặc 2 cột rời)
-        let matchFull = searchSpace.find(s => s.n === 'họvàtên');
-        let matchHo = searchSpace.find(s => s.n.startsWith('họ'));
-        let matchTen = searchSpace.find(s => s.n === 'tên');
+        let matchFull = searchSpace.find(s => s.n === 'họvàtên' || s.n.includes('họvàtên'));
+        let matchHo = searchSpace.find(s => s.n === 'họ' || s.n === 'họđệm' || s.n.startsWith('họ') || s.n.includes('họ'));
+        let matchTen = searchSpace.find(s => s.n === 'tên' || (s.n.includes('tên') && !s.n.includes('họ')));
+
+        // Fallback mặc định theo định dạng vnEdu/SMAS chuẩn: D (index 3) là Họ, E (index 4) là Tên
+        if (!matchFull) {
+           if (!matchHo) matchHo = { c: 3 }; 
+           if (!matchTen) matchTen = { c: 4 };
+        }
 
         if (matchHo && matchTen && matchHo.c !== matchTen.c) {
            colMapping['Họ'] = matchHo.c;
