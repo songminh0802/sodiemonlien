@@ -181,6 +181,14 @@
     .khoa-quan-tri .icon { font-size: 2rem; margin-bottom: 8px; }
 
     .an { display: none !important; }
+
+    /* DASHBOARD CSS */
+    .luoi-thong-ke { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px; }
+    .the-so { background: #fff; padding: 20px; border-radius: 10px; border: 1px solid var(--vien); text-align: center; }
+    .the-so .tieu-de { font-size: 0.85rem; color: var(--muc-nhat); margin-bottom: 8px; font-weight: 600; text-transform: uppercase; }
+    .the-so .gia-tri { font-size: 2rem; color: var(--dong); font-weight: bold; }
+    .the-so .phu { font-size: 0.85rem; margin-top: 5px; color: var(--xanh); }
+    .bieu-do-container { width: 100%; max-width: 400px; margin: 0 auto; }
   </style>
 </head>
 <body>
@@ -191,15 +199,53 @@
   </header>
 
   <nav class="tab">
-    <button class="tab-nut dang-chon" data-tab="ca-nhan">Tra cứu cá nhân</button>
+    <button class="tab-nut dang-chon" data-tab="thong-ke">Thống kê</button>
+    <button class="tab-nut" data-tab="ca-nhan">Tra cứu cá nhân</button>
     <button class="tab-nut" data-tab="lop">Xem theo lớp</button>
     <button class="tab-nut" data-tab="quan-tri">Quản trị</button>
   </nav>
 
   <main>
 
+    <!-- TAB 0: THỐNG KÊ (DASHBOARD) -->
+    <section id="khung-thong-ke" class="khung dang-chon">
+      <div class="the">
+        <div class="hang-nhap">
+          <select id="chon-ky-thong-ke">
+            <option value="HK1">Học kỳ 1</option>
+            <option value="HK2">Học kỳ 2</option>
+            <option value="CaNam">Cả năm</option>
+          </select>
+          <button class="nut" id="nut-xem-thong-ke">Xem thống kê</button>
+        </div>
+        <p class="ghi-chu">Hệ thống sẽ tự động tổng hợp Sĩ số, Điểm trung bình và tỷ lệ Xếp loại của lớp.</p>
+        <div id="thong-bao-thong-ke"></div>
+        
+        <div id="ket-qua-thong-ke" class="an">
+           <div class="luoi-thong-ke">
+              <div class="the-so">
+                 <div class="tieu-de">Tổng Sĩ Số</div>
+                 <div class="gia-tri" id="tk-si-so">0</div>
+              </div>
+              <div class="the-so">
+                 <div class="tieu-de">ĐTB Cao Nhất</div>
+                 <div class="gia-tri" id="tk-dtb-cao">0</div>
+                 <div class="phu" id="tk-ten-cao">-</div>
+              </div>
+              <div class="the-so">
+                 <div class="tieu-de">ĐTB Cả Lớp</div>
+                 <div class="gia-tri" id="tk-dtb-lop">0</div>
+              </div>
+           </div>
+           <div class="bieu-do-container">
+             <canvas id="bieu-do-xep-loai"></canvas>
+           </div>
+        </div>
+      </div>
+    </section>
+
     <!-- TAB 1: TRA CỨU CÁ NHÂN -->
-    <section id="khung-ca-nhan" class="khung dang-chon">
+    <section id="khung-ca-nhan" class="khung">
       <div class="the">
         <div class="hang-nhap">
           <input type="text" id="o-ma-hs" placeholder="Nhập chính xác Họ và tên...">
@@ -269,6 +315,7 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
   const GAS_URL = "https://script.google.com/macros/s/AKfycbxXExy1la6O6ZcPYXbRyisijIM9yklie2cz-BKMLj_R9QGAe7UdAbRopLINOi2z4W7M/exec";
 
@@ -395,6 +442,97 @@
     document.getElementById('ket-qua-lop').innerHTML = html;
   }
 
+  // ====== TAB: THỐNG KÊ (DASHBOARD) ======
+  let bieuDoXepLoai = null;
+
+  document.getElementById('nut-xem-thong-ke').addEventListener('click', () => {
+    const ky = document.getElementById('chon-ky-thong-ke').value;
+    hienThongBao('thong-bao-thong-ke', '', '');
+    document.getElementById('ket-qua-thong-ke').classList.add('an');
+    document.getElementById('nut-xem-thong-ke').disabled = true;
+
+    goiAPI('getDanhSachLop', { ky })
+      .then(ds => {
+        document.getElementById('nut-xem-thong-ke').disabled = false;
+        renderThongKe(ds, ky);
+      })
+      .catch(loi => {
+        document.getElementById('nut-xem-thong-ke').disabled = false;
+        hienThongBao('thong-bao-thong-ke', loi.message, 'loi');
+      });
+  });
+
+  function renderThongKe(ds, ky) {
+    if (!ds.length) {
+      hienThongBao('thong-bao-thong-ke', 'Chưa có dữ liệu cho kỳ này.', 'loi');
+      return;
+    }
+
+    document.getElementById('ket-qua-thong-ke').classList.remove('an');
+
+    let tongDiem = 0;
+    let maxDiem = -1;
+    let nguoiCaoNhat = '';
+    let countHopLe = 0;
+
+    let mucLoai = { Tot: 0, Kha: 0, Dat: 0, ChuaDat: 0 };
+    
+    // Cột Điểm trung bình có tên khác nhau tùy kỳ
+    const cotDiem = (ky === 'CaNam') ? 'TB Cả năm' : 'ĐTB mhk';
+
+    ds.forEach(hs => {
+       const diemStr = hs[cotDiem];
+       if (diemStr !== undefined && diemStr !== '') {
+          const diem = parseFloat(diemStr.toString().replace(',', '.'));
+          if (!isNaN(diem)) {
+             tongDiem += diem;
+             countHopLe++;
+             if (diem > maxDiem) {
+                maxDiem = diem;
+                const ho = hs['Họ'] || '';
+                const ten = hs['Tên'] || '';
+                nguoiCaoNhat = (ho + ' ' + ten).trim();
+             }
+
+             if (diem >= 8.0) mucLoai.Tot++;
+             else if (diem >= 6.5) mucLoai.Kha++;
+             else if (diem >= 5.0) mucLoai.Dat++;
+             else mucLoai.ChuaDat++;
+          }
+       }
+    });
+
+    document.getElementById('tk-si-so').innerText = ds.length;
+    document.getElementById('tk-dtb-cao').innerText = maxDiem >= 0 ? maxDiem.toFixed(1).replace('.', ',') : '-';
+    document.getElementById('tk-ten-cao').innerText = nguoiCaoNhat;
+    document.getElementById('tk-dtb-lop').innerText = countHopLe > 0 ? (tongDiem / countHopLe).toFixed(1).replace('.', ',') : '-';
+
+    veBieuDo(mucLoai);
+  }
+
+  function veBieuDo(mucLoai) {
+    const ctx = document.getElementById('bieu-do-xep-loai').getContext('2d');
+    if (bieuDoXepLoai) bieuDoXepLoai.destroy();
+
+    bieuDoXepLoai = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Tốt (≥ 8.0)', 'Khá (6.5 - 7.9)', 'Đạt (5.0 - 6.4)', 'Chưa đạt (< 5.0)'],
+        datasets: [{
+          data: [mucLoai.Tot, mucLoai.Kha, mucLoai.Dat, mucLoai.ChuaDat],
+          backgroundColor: ['#3a7d5c', '#4a90e2', '#f39c12', '#e74c3c'],
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'bottom' }
+        }
+      }
+    });
+  }
+
   // ====== TAB 3: MỞ KHÓA QUẢN TRỊ ======
   document.getElementById('nut-mo-khoa').addEventListener('click', () => {
     const mk = document.getElementById('o-mat-khau').value;
@@ -454,9 +592,9 @@
         const rawData = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
         
         // Danh sách cột chuẩn mực cần có cho mỗi kỳ (để gửi lên server)
-        const COLS_K1 = ['STT', 'Họ và tên', 'TX1', 'TX2', 'TX3', 'TX4', 'ĐĐGgk', 'ĐĐGck', 'ĐTB mhk', 'Nhận xét'];
-        const COLS_K2 = ['STT', 'Họ và tên', 'TX1', 'TX2', 'TX3', 'TX4', 'ĐĐGgk', 'ĐĐGck', 'ĐTB mhk', 'Nhận xét', 'HKI', 'HKII', 'CN'];
-        const COLS_CA = ['STT', 'Họ và tên', 'TBHK 1', 'TBHK 2', 'TB Cả năm', 'Điểm thi lại', 'Ghi chú'];
+        const COLS_K1 = ['STT', 'Họ', 'Tên', 'TX1', 'TX2', 'TX3', 'TX4', 'ĐĐGgk', 'ĐĐGck', 'ĐTB mhk', 'Nhận xét'];
+        const COLS_K2 = ['STT', 'Họ', 'Tên', 'TX1', 'TX2', 'TX3', 'TX4', 'ĐĐGgk', 'ĐĐGck', 'ĐTB mhk', 'Nhận xét', 'HKI', 'HKII', 'CN'];
+        const COLS_CA = ['STT', 'Họ', 'Tên', 'TBHK 1', 'TBHK 2', 'TB Cả năm', 'Điểm thi lại', 'Ghi chú'];
         
         let targetCols = [];
         if (ky === 'HK1') targetCols = COLS_K1;
@@ -490,31 +628,29 @@
           });
         }
 
-        targetCols.forEach(tc => {
-          if (tc === 'Họ và tên') {
-             let matchFull = searchSpace.find(s => s.n === 'họvàtên');
-             let matchHo = searchSpace.find(s => s.n.startsWith('họ'));
-             let matchTen = searchSpace.find(s => s.n === 'tên');
+        // Xử lý đặc biệt cho Họ và Tên (do có thể gộp ô hoặc 2 cột rời)
+        let matchFull = searchSpace.find(s => s.n === 'họvàtên');
+        let matchHo = searchSpace.find(s => s.n.startsWith('họ'));
+        let matchTen = searchSpace.find(s => s.n === 'tên');
 
-             if (matchHo && matchTen) {
-                colMapping['Họ'] = matchHo.c;
-                colMapping['Tên'] = matchTen.c;
-             } else if (matchFull) {
-                // Kiểm tra xem cột ngay bên phải có trống tiêu đề không (tức là ô gộp)
-                let rightCol = matchFull.c + 1;
-                let hasHeader = searchSpace.find(s => s.c === rightCol);
-                
-                if (!hasHeader) {
-                   // Ô gộp 2 cột
-                   colMapping['Họ'] = matchFull.c;
-                   colMapping['Tên'] = rightCol;
-                } else {
-                   // Cột đơn bình thường
-                   colMapping['Họ và tên'] = matchFull.c;
-                }
-             }
-             return;
-          }
+        if (matchHo && matchTen && matchHo.c !== matchTen.c) {
+           colMapping['Họ'] = matchHo.c;
+           colMapping['Tên'] = matchTen.c;
+        } else if (matchFull) {
+           let rightCol = matchFull.c + 1;
+           let hasHeader = searchSpace.find(s => s.c === rightCol);
+           if (!hasHeader) { // Bị gộp ngang 2 cột
+              colMapping['Họ'] = matchFull.c;
+              colMapping['Tên'] = rightCol;
+           } else { // Thực sự chỉ có 1 cột Họ và tên
+              colMapping['Họ'] = matchFull.c;
+              colMapping['Tên'] = null; // Cờ đánh dấu để tự cắt chuỗi sau
+           }
+        }
+
+        targetCols.forEach(tc => {
+          if (tc === 'Họ' || tc === 'Tên') return; // Đã xử lý ở trên
+
 
           const ntc = norm(tc);
           let match = searchSpace.find(s => s.n === ntc);
@@ -544,24 +680,33 @@
         for (let i = dataStartIdx; i < rawData.length; i++) {
           const row = rawData[i];
           
-          // Xử lý Họ và tên (1 cột hoặc 2 cột)
-          let hoTenVal = '';
-          if (colMapping['Họ và tên'] !== undefined) {
-             hoTenVal = row[colMapping['Họ và tên']] || '';
-          } else if (colMapping['Họ'] !== undefined && colMapping['Tên'] !== undefined) {
-             const ho = row[colMapping['Họ']] || '';
-             const ten = row[colMapping['Tên']] || '';
-             hoTenVal = (ho + ' ' + ten).trim();
+          let ho = '';
+          let ten = '';
+
+          // Xử lý Họ và Tên để luôn lưu thành 2 cột trong Google Sheet
+          if (colMapping['Họ'] !== undefined && colMapping['Tên'] !== undefined && colMapping['Tên'] !== null) {
+             ho = (row[colMapping['Họ']] || '').toString().trim();
+             ten = (row[colMapping['Tên']] || '').toString().trim();
+          } else if (colMapping['Họ'] !== undefined && colMapping['Tên'] === null) {
+             // File Excel chỉ có 1 cột "Họ và tên" => phải tự tách chữ cuối cùng làm Tên
+             const fullName = (row[colMapping['Họ']] || '').toString().trim();
+             const parts = fullName.split(' ');
+             if (parts.length > 1) {
+                ten = parts.pop();
+                ho = parts.join(' ');
+             } else {
+                ho = fullName;
+             }
           }
 
-          // Nếu dòng không có Tên thì bỏ qua (thường là dòng trống hoặc chữ ký)
-          if (!hoTenVal) continue;
+          // Bỏ qua dòng rác/trống
+          if (!ho && !ten) continue;
           
           const obj = {};
           targetCols.forEach(tc => {
-            if (tc === 'Họ và tên') {
-               obj[tc] = hoTenVal;
-            } else {
+            if (tc === 'Họ') obj[tc] = ho;
+            else if (tc === 'Tên') obj[tc] = ten;
+            else {
                let val = colMapping[tc] !== undefined ? row[colMapping[tc]] : '';
                if (typeof val === 'string') val = val.trim();
                obj[tc] = val;
