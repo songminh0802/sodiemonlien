@@ -426,19 +426,35 @@
                  <div class="phu" id="tk-ten-cao">-</div>
               </div>
               <div class="the-so">
-                 <div class="tieu-de">ĐTB Cả Lớp</div>
+                 <div class="tieu-de">ĐTB Khối/Lớp</div>
                  <div class="gia-tri" id="tk-dtb-lop">0</div>
               </div>
            </div>
+
+           <!-- Khu vực Vinh danh & Cần hỗ trợ -->
+           <div style="display: flex; flex-wrap: wrap; gap: 24px; margin-top: 30px;">
+              <div id="vinh-danh-container" style="flex: 1; min-width: 300px;"></div>
+              <div id="can-ho-tro-container" style="flex: 1; min-width: 300px;"></div>
+           </div>
            
-           <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; justify-content: center; margin-top: 30px;">
-             <div class="bieu-do-container" style="flex: 1; min-width: 250px; margin: 0;">
+           <!-- Khu vực Biểu đồ -->
+           <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: stretch; justify-content: center; margin-top: 30px;">
+             <div class="bieu-do-container" style="flex: 1; min-width: 300px; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+               <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 1.1rem; color: var(--text-main); font-weight: 600;">Tỷ lệ Xếp loại</h3>
                <canvas id="bieu-do-xep-loai"></canvas>
              </div>
-             <div id="bang-thong-ke-container" style="flex: 1.5; min-width: 320px;">
-               <!-- Bảng thống kê sẽ hiện ở đây -->
+             <div class="bieu-do-container" style="flex: 1.5; min-width: 300px; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+               <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 1.1rem; color: var(--text-main); font-weight: 600;">Phổ điểm Chi tiết</h3>
+               <canvas id="bieu-do-pho-diem"></canvas>
              </div>
            </div>
+
+           <!-- Bảng Xếp loại & Điểm thành phần -->
+           <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; justify-content: center; margin-top: 30px;">
+             <div id="bang-thong-ke-container" style="flex: 1; min-width: 320px;"></div>
+             <div id="bang-chi-tiet-diem-container" style="flex: 2; min-width: 320px;"></div>
+           </div>
+           
            <div id="bang-chi-tiet-lop-container" style="margin-top: 30px; width: 100%;"></div>
         </div>
       </div>
@@ -851,6 +867,7 @@
 
   // ====== TAB: THỐNG KÊ (DASHBOARD) ======
   let bieuDoXepLoai = null;
+  let bieuDoPhoDiem = null;
 
   document.getElementById('nut-xem-thong-ke').addEventListener('click', () => {
     const ky = document.getElementById('chon-ky-thong-ke').value;
@@ -894,7 +911,11 @@
     let countHopLe = 0;
 
     let mucLoai = { Tot: 0, Kha: 0, Dat: 0, ChuaDat: 0 };
+    let phoDiem = { '<5': 0, '5-6.5': 0, '6.5-8': 0, '8-9': 0, '9-10': 0 };
     
+    // Lưu lại danh sách sinh viên hợp lệ để sắp xếp Top 5 và Tìm học sinh < 5.0
+    let validStudents = [];
+
     // Cột Điểm trung bình có tên khác nhau tùy kỳ
     const cotDiem = (ky === 'CaNam') ? 'TB Cả năm' : 'ĐTB mhk';
 
@@ -905,18 +926,29 @@
           if (!isNaN(diem)) {
              tongDiem += diem;
              countHopLe++;
+             
+             const ho = hs['Họ'] || '';
+             const ten = hs['Tên'] || '';
+             const tenLop = hs['Lớp'] ? ` (${hs['Lớp']})` : '';
+             const fullName = (ho + ' ' + ten).trim() + tenLop;
+             
+             validStudents.push({ hs, diem, fullName });
+
              if (diem > maxDiem) {
                 maxDiem = diem;
-                const ho = hs['Họ'] || '';
-                const ten = hs['Tên'] || '';
-                const tenLop = hs['Lớp'] ? ` (${hs['Lớp']})` : '';
-                nguoiCaoNhat = (ho + ' ' + ten).trim() + tenLop;
+                nguoiCaoNhat = fullName;
              }
 
              if (diem >= 8.0) mucLoai.Tot++;
              else if (diem >= 6.5) mucLoai.Kha++;
              else if (diem >= 5.0) mucLoai.Dat++;
              else mucLoai.ChuaDat++;
+             
+             if (diem < 5.0) phoDiem['<5']++;
+             else if (diem < 6.5) phoDiem['5-6.5']++;
+             else if (diem < 8.0) phoDiem['6.5-8']++;
+             else if (diem < 9.0) phoDiem['8-9']++;
+             else phoDiem['9-10']++;
           }
        }
     });
@@ -926,11 +958,54 @@
     document.getElementById('tk-ten-cao').innerText = nguoiCaoNhat;
     document.getElementById('tk-dtb-lop').innerText = countHopLe > 0 ? (tongDiem / countHopLe).toFixed(1).replace('.', ',') : '-';
 
-    // Tạo bảng thống kê
+    // 1. Render Top 5
+    validStudents.sort((a, b) => b.diem - a.diem);
+    const top5 = validStudents.slice(0, 5);
+    
+    let htmlVinhDanh = `
+      <h3 style="margin-bottom: 12px; font-size: 1.1rem; color: var(--primary); font-weight: 700; display: flex; align-items: center; gap: 6px;">🏆 Bảng Vinh Danh (Top 5)</h3>
+      <div style="background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e5e7eb; overflow: hidden;">
+        <table class="bang-diem" style="margin-bottom: 0;">
+    `;
+    top5.forEach((item, index) => {
+        let icon = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '✨';
+        htmlVinhDanh += `
+          <tr>
+            <td style="width: 40px; text-align: center; font-size: 1.2rem;">${icon}</td>
+            <td style="font-weight: 600;">${item.fullName}</td>
+            <td style="text-align: right; color: var(--primary); font-weight: bold; font-size: 1.1rem;">${item.diem.toFixed(1).replace('.', ',')}</td>
+          </tr>
+        `;
+    });
+    if (top5.length === 0) htmlVinhDanh += `<tr><td colspan="3" style="text-align: center; color: var(--text-muted);">Chưa có dữ liệu</td></tr>`;
+    htmlVinhDanh += `</table></div>`;
+    document.getElementById('vinh-danh-container').innerHTML = htmlVinhDanh;
+
+    // 2. Render Học sinh cần hỗ trợ (< 5.0)
+    const canHoTro = validStudents.filter(item => item.diem < 5.0).reverse();
+    let htmlCanHoTro = `
+      <h3 style="margin-bottom: 12px; font-size: 1.1rem; color: var(--danger); font-weight: 700; display: flex; align-items: center; gap: 6px;">🆘 Học sinh cần hỗ trợ (< 5.0)</h3>
+      <div style="background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e5e7eb; overflow: hidden; max-height: 250px; overflow-y: auto;">
+        <table class="bang-diem" style="margin-bottom: 0;">
+    `;
+    canHoTro.forEach(item => {
+        htmlCanHoTro += `
+          <tr>
+            <td style="font-weight: 500;">${item.fullName}</td>
+            <td style="text-align: right; color: var(--danger); font-weight: bold;">${item.diem.toFixed(1).replace('.', ',')}</td>
+          </tr>
+        `;
+    });
+    if (canHoTro.length === 0) htmlCanHoTro += `<tr><td colspan="2" style="text-align: center; color: var(--success); font-weight: 500;">Tuyệt vời! Không có học sinh nào dưới trung bình.</td></tr>`;
+    htmlCanHoTro += `</table></div>`;
+    document.getElementById('can-ho-tro-container').innerHTML = htmlCanHoTro;
+
+    // 3. Bảng Xếp loại
     const total = mucLoai.Tot + mucLoai.Kha + mucLoai.Dat + mucLoai.ChuaDat;
     const tl = (val) => total > 0 ? ((val / total) * 100).toFixed(1) + '%' : '0%';
 
     let htmlBang = `
+      <h3 style="margin-bottom: 12px; font-size: 1.1rem; color: var(--text-main); font-weight: 700;">Tỷ lệ Xếp loại</h3>
       <div class="cuon-bang">
         <table class="bang-diem">
           <tr>
@@ -967,6 +1042,59 @@
       </div>
     `;
     document.getElementById('bang-thong-ke-container').innerHTML = htmlBang;
+
+    // 4. Thống kê từng cột điểm
+    const cot = Object.keys(ds[0] || {});
+    const boQuaToMau = ['STT', 'Lớp', 'Họ', 'Tên', 'Nhận xét', 'Ghi chú'];
+    const scoreCols = cot.filter(c => !boQuaToMau.includes(c));
+    
+    let statsDiemHtml = `
+      <h3 style="margin-bottom: 12px; font-size: 1.1rem; color: var(--text-main); font-weight: 700;">Chi tiết từng cột điểm</h3>
+      <div class="cuon-bang">
+        <table class="bang-diem" style="margin-bottom: 0;">
+          <tr>
+            <th>Cột điểm</th>
+            <th>SL nhập</th>
+            <th>🟢 Tốt</th>
+            <th>🔵 Khá</th>
+            <th>🟡 Đạt</th>
+            <th>🔴 C.Đạt</th>
+          </tr>`;
+    
+    scoreCols.forEach(sc => {
+       let sTotal = 0;
+       let sCount = { T: 0, K: 0, D: 0, C: 0 };
+       ds.forEach(hs => {
+          const valStr = (hs[sc] || '').toString().trim();
+          if (!valStr) return;
+          const val = parseFloat(valStr.replace(',', '.'));
+          if (isNaN(val)) return;
+          
+          sTotal++;
+          if (val >= 8.0) sCount.T++;
+          else if (val >= 6.5) sCount.K++;
+          else if (val >= 5.0) sCount.D++;
+          else sCount.C++;
+       });
+       
+       if (sTotal > 0) {
+          const ptT = ((sCount.T / sTotal) * 100).toFixed(0) + '%';
+          const ptK = ((sCount.K / sTotal) * 100).toFixed(0) + '%';
+          const ptD = ((sCount.D / sTotal) * 100).toFixed(0) + '%';
+          const ptC = ((sCount.C / sTotal) * 100).toFixed(0) + '%';
+          
+          statsDiemHtml += `<tr>
+            <td style="font-weight: bold; color: var(--primary);">${sc}</td>
+            <td style="font-weight: 600;">${sTotal}</td>
+            <td>${sCount.T} <span style="font-size: 0.85em; color: #6b7280;">(${ptT})</span></td>
+            <td>${sCount.K} <span style="font-size: 0.85em; color: #6b7280;">(${ptK})</span></td>
+            <td>${sCount.D} <span style="font-size: 0.85em; color: #6b7280;">(${ptD})</span></td>
+            <td><span style="color: var(--danger); font-weight: bold;">${sCount.C}</span> <span style="font-size: 0.85em; color: #6b7280;">(${ptC})</span></td>
+          </tr>`;
+       }
+    });
+    statsDiemHtml += `</table></div>`;
+    document.getElementById('bang-chi-tiet-diem-container').innerHTML = statsDiemHtml;
 
     // Tạo bảng chi tiết theo từng lớp nếu lop === 'ALL'
     const bangChiTiet = document.getElementById('bang-chi-tiet-lop-container');
@@ -1028,14 +1156,14 @@
       bangChiTiet.innerHTML = '';
     }
 
-    veBieuDo(mucLoai);
+    veBieuDo(mucLoai, phoDiem);
   }
 
-  function veBieuDo(mucLoai) {
-    const ctx = document.getElementById('bieu-do-xep-loai').getContext('2d');
+  function veBieuDo(mucLoai, phoDiem) {
+    const ctxXepLoai = document.getElementById('bieu-do-xep-loai').getContext('2d');
     if (bieuDoXepLoai) bieuDoXepLoai.destroy();
 
-    bieuDoXepLoai = new Chart(ctx, {
+    bieuDoXepLoai = new Chart(ctxXepLoai, {
       type: 'doughnut',
       data: {
         labels: ['Tốt (≥ 8.0)', 'Khá (6.5 - 7.9)', 'Đạt (5.0 - 6.4)', 'Chưa đạt (< 5.0)'],
@@ -1049,6 +1177,34 @@
         responsive: true,
         plugins: {
           legend: { position: 'bottom' }
+        }
+      }
+    });
+
+    const ctxPhoDiem = document.getElementById('bieu-do-pho-diem').getContext('2d');
+    if (bieuDoPhoDiem) bieuDoPhoDiem.destroy();
+
+    bieuDoPhoDiem = new Chart(ctxPhoDiem, {
+      type: 'bar',
+      data: {
+        labels: ['< 5.0', '5.0 - 6.4', '6.5 - 7.9', '8.0 - 8.9', '9.0 - 10'],
+        datasets: [{
+          label: 'Số học sinh',
+          data: [phoDiem['<5'], phoDiem['5-6.5'], phoDiem['6.5-8'], phoDiem['8-9'], phoDiem['9-10']],
+          backgroundColor: ['#ef4444', '#f59e0b', '#3b82f6', '#10b981', '#059669'],
+          borderRadius: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { stepSize: 1 }
+          }
         }
       }
     });
