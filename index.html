@@ -430,8 +430,14 @@
                  <div class="gia-tri" id="tk-dtb-lop">0</div>
               </div>
            </div>
-           <div class="bieu-do-container">
-             <canvas id="bieu-do-xep-loai"></canvas>
+           
+           <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; justify-content: center; margin-top: 30px;">
+             <div class="bieu-do-container" style="flex: 1; min-width: 250px; margin: 0;">
+               <canvas id="bieu-do-xep-loai"></canvas>
+             </div>
+             <div id="bang-thong-ke-container" style="flex: 1.5; min-width: 320px;">
+               <!-- Bảng thống kê sẽ hiện ở đây -->
+             </div>
            </div>
         </div>
       </div>
@@ -756,6 +762,48 @@
     document.getElementById('tk-ten-cao').innerText = nguoiCaoNhat;
     document.getElementById('tk-dtb-lop').innerText = countHopLe > 0 ? (tongDiem / countHopLe).toFixed(1).replace('.', ',') : '-';
 
+    // Tạo bảng thống kê
+    const total = mucLoai.Tot + mucLoai.Kha + mucLoai.Dat + mucLoai.ChuaDat;
+    const tl = (val) => total > 0 ? ((val / total) * 100).toFixed(1) + '%' : '0%';
+
+    let htmlBang = `
+      <div class="cuon-bang">
+        <table class="bang-diem">
+          <tr>
+            <th>Xếp loại</th>
+            <th style="text-align: right">Số lượng</th>
+            <th style="text-align: right">Tỉ lệ</th>
+          </tr>
+          <tr>
+            <td><span style="color:#10b981; font-weight:bold">Tốt (≥ 8.0)</span></td>
+            <td style="text-align: right">${mucLoai.Tot}</td>
+            <td style="text-align: right">${tl(mucLoai.Tot)}</td>
+          </tr>
+          <tr>
+            <td><span style="color:#3b82f6; font-weight:bold">Khá (6.5 - 7.9)</span></td>
+            <td style="text-align: right">${mucLoai.Kha}</td>
+            <td style="text-align: right">${tl(mucLoai.Kha)}</td>
+          </tr>
+          <tr>
+            <td><span style="color:#f59e0b; font-weight:bold">Đạt (5.0 - 6.4)</span></td>
+            <td style="text-align: right">${mucLoai.Dat}</td>
+            <td style="text-align: right">${tl(mucLoai.Dat)}</td>
+          </tr>
+          <tr>
+            <td><span style="color:#ef4444; font-weight:bold">Chưa đạt (< 5.0)</span></td>
+            <td style="text-align: right">${mucLoai.ChuaDat}</td>
+            <td style="text-align: right">${tl(mucLoai.ChuaDat)}</td>
+          </tr>
+          <tr style="background: var(--bg-body); font-weight: bold; color: var(--text-main);">
+            <td>Tổng cộng</td>
+            <td style="text-align: right">${total}</td>
+            <td style="text-align: right">100%</td>
+          </tr>
+        </table>
+      </div>
+    `;
+    document.getElementById('bang-thong-ke-container').innerHTML = htmlBang;
+
     veBieuDo(mucLoai);
   }
 
@@ -769,7 +817,7 @@
         labels: ['Tốt (≥ 8.0)', 'Khá (6.5 - 7.9)', 'Đạt (5.0 - 6.4)', 'Chưa đạt (< 5.0)'],
         datasets: [{
           data: [mucLoai.Tot, mucLoai.Kha, mucLoai.Dat, mucLoai.ChuaDat],
-          backgroundColor: ['#3a7d5c', '#4a90e2', '#f39c12', '#e74c3c'],
+          backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'],
           borderWidth: 1
         }]
       },
